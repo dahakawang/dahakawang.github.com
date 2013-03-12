@@ -1,0 +1,95 @@
+---
+layout: post
+title: "【Ruby】require背后的故事"
+date: 2013-03-12 14:39
+comments: true
+categories: [Ruby相关, 原理探求]
+sharing: false
+published: true
+---
+接触ruby有一段时间了，说起来自己和这门语言倒挺有缘。学生时代的时候，曾经沉迷于一款叫做RPG Maker的软件。当时和朋友以班上的同学为原型写了一部武侠剧，并计划用RPG Maker制作成游戏，乐此不疲。这个RPG Maker在内部使用了一门脚本语言来描述其游戏逻辑，这门语言便是Ruby。于是乎为了修改游戏框架、拓展引擎原有特性，自己花了不少功夫学习Ruby。可惜最后，由于高考临近，Ruby随着RPG Maker一块儿，淹没在了记忆的深处。
+
+最近突然间有了兴趣，又把Ruby拿出来看看，却发觉这五六年间，Ruby语言的变化之大，是我难以预期的。无论是语言特性本身，还是周边的开发工具、程序库，都较之前有了较大的发展，于是重温变成了重新学习。
+
+既然是学习，光说不练可不行，于是乎又一边开始学习起了Ruby on Rails来，希望能够学以致用。RoR在Ruby社区内可是有着响当当的名号，可以说Ruby之所以名声大噪，很大程度上都是由于RoR的功劳。RoR是一个纯粹的开源软件，它凝聚了世界上最优秀Ruby程序员的勤劳和天分。而我自己，也由于对RoR的研读，了解到了不少Ruby的精妙之处。喟叹之际，便也想对其抽丝剥茧，习其精髓，并记录于博客之中，以飨诸位同好。 Y(^_^)Y
+
+<!-- more -->
+
+## require到底干了什么？
+
+第一次看到require语句的时候，立刻有一种似曾相识的感觉。作为一名C语言起家的技术人，我看到了include的影子。从开发者的角度来说，这两条指令完成了相似的工作：告诉编译器我们想要引用其它地方的代码。但是，仔细思考和实验过后，却不难发觉，这两条指令在实现层面上乃是千差万别。
+
+当我们include一个头文件的时候发生了什么？答案是编译器找到对应的头文件，并将其原地展开。通过对头文件中代码的解析，编译器知道了我们要引用的代码的声明（Declaration）。所谓声明，即是指编译器知道将要引用的代码到底长成什么样，而并不知道代码具体是什么（Definition）。而为了让我们的代码真正地用上所引用的代码，我们需要在链接的时候，向linker指明引用库的地址。而这个所谓的引用库，才包含了我们欲引用代码的具体定义。
+
+反观require呢？当我们require某个外部代码的时候，我们实际上是告诉编译器寻找对应的rb文件。这个rb文件中有什么？答案是，引用代码的具体定义。这时候require和include有何区别的答案便呼之欲出了：由于Ruby没有传统意义上的链接过程，我们require实际上是载入代码的实现/定义；而对于C编译器来说，include只不过是告诉编译器代码长啥样，这使得编译器能够生成＂调用代码＂，而＂实现代码＂则是在链接阶段予以提供的。
+
+## require的实现
+
+按照官方解释，require将会在Ruby的LOAD_PATH中查找对应文件并将其载入。好奇心促使我跟踪了require的执行过程，却发觉require并没有调用系统默认的Kernel#require，而是调用到了位于custom_require.rb中的Kernel#require函数之中。
+
+而恰巧的是，这个文件是属于RubyGem的一部分。到目前为止，我们还能够理解发生了什么：RubyGem用自己的require替代了系统默认的版本，并藉此实现了它自己的逻辑。
+
+可是这样理解后的问题接踵而来，首当其冲的问题便是，明明没有人引用RubyGem，那么这个文件是谁通过怎样的方式载入的呢？再则，我们开启irb，这时候理当没有任何Gem被载入，可是发觉Gem这个模块已经被定义了是怎么回事呢？
+
+啊，一定有谁在我们的代码执行前就载入了RubyGem！我在RubyGem的代码中添加了打印函数调用栈的逻辑，然后运行一个空的Ruby脚本，看到了如下的现象：
+
+~~~
+david@david-K40IN:~/Desktop/root$ ruby -e ''
+/home/david/.rvm/rubies/ruby-1.9.3-p362/lib/ruby/site_ruby/1.9.1/rubygems.rb:1282:in `require'
+/home/david/.rvm/rubies/ruby-1.9.3-p362/lib/ruby/site_ruby/1.9.1/rubygems.rb:1282:in `<top (required)>'
+ <internal:gem_prelude>:1:in `require'
+<internal:gem_prelude>:1:in `<compiled>'
+~~~
+
+可以观察到是一个叫做gem_prelude的文件载入了RubyGem。这个文件是什么？前面的internal似乎显示了它不一样的地位。我搜遍Ruby的目录，也没有找到这么一个文件，却只是在Ruby的源码目录中找到了它的身影。
+
+原来，这个文件是编译Ruby时自动生成的（这里仅讨论Ruby较新的版本(1.9.x)，实现代码[见此](https://github.com/ruby/ruby/blob/trunk/tool/compile_prelude.rb))，它的内容只有一句话，那便是``` require 'RubyGem' if defined?(Gem)```。其中Gem符号是在ruby.c里直接定义的（Hardcoded），如果你要取消该特性，编译Ruby的时候需要指明``` --disable-gems ```选项。
+
+现在，问题的答案很明朗了。由于RubyGem使用地十分广泛，以至于Ruby开发团队决定予以其直接支持，这便是为什么我们总是发觉RubyGem被载入的原因了。这也同时更好地解释了，明明也是一个Gem，为什么RubyGem没有和其他Gem放到一块儿，并遵循Gem名加上版本号的命名方式。
+
+## RubyGem - 将宝石打包
+
+咱们再来谈谈Ruby的包管理机制。这里的基本思路十分简单，Ruby本身载入某个代码只会在LOAD_PATH里寻找，如果我们定义＂使用某个Gem＂为将Gem所在路径添加到Ruby的LOAD_PATH里，这样当我们使用了某个Gem后，我们便能够载入这个Gem的代码了。其次，我们在包的根目录下放上某个包含诸如作者、主页、依赖的库等等信息的文件，这便有了Gem的元数据信息。最后，我们把Gem的根目录命名为Gem名加版本号，这样多版本的管理机制也就有了。于是乎，整个Gem的工作机制便呼之欲出了。
+
+按照惯例，我们一般是用require 'arel'的方式来载入Gem代码。可是，根据require函数定义，我们实际上需要使用类似 'gems/arel-3.0.2/arel'的参数传给require才能达到我们的目的。为什么简单的require 'arel'能行呢？因为我们在此之前使用了gem 'arel' 语句，是它按照之前提到的规律找到了arel库某个版本的位置，并将它加入到LOAD_PATH里，这才使我们能够简单地require一个Gem库。
+
+不过，正如上一节指出的，在新版本的Ruby里，Kernel#require早已自动被RubyGem里的同名函数覆盖了。因此，在新版本的Ruby里，我们连gem语句都不需要，可以直接require了（老版本则需要我们显式调用require 'rubygem'才行）。不过，若是你需要明确的指定使用某一版本的Gem（Gem 'arel', '＞=3.0.0'），还是需要显示地调用gem方法。
+
+RubyGem这个库具有两面性，上面的讨论仅是从Gem的使用者角度展开的。而RubyGem同时也给予了Gem库开发者以大量支持，但是我在这里不会讨论。
+
+## Bundler
+
+好的，终于谈到它了，它是我最喜欢的一个工具。我在Linux下开发时间虽然不长，但是痛苦程度应该比起经验丰富的开发者也不遑多让。原因在于传统的Linux开发相当复杂，除了软件系统本身的复杂性外，还得受错综复杂的各种依赖关系所累。常常是一个程序还没开始编译，就得先安装个一天的各种依赖库再说。
+
+但是，这个令我十分头痛的问题却被Bundler解决了，而且解决地十分漂亮。你的软件需要什么依赖库，具体依赖啥版本，你写成一个Gemfile清单来看。我check out你的代码后，啥也不管，简单地bundle install，开发环境就搭建好了，各种依赖库也到位了，好不痛快！
+
+bundle install指令致力于确保Gem所有依赖库均被安装到本机，但它并不保证列在Gemfile里的依赖库在运行时被载入。为了让我们的程序使用上这些库，我们需要在运行时调用Bundler.setup，该方法将列举在Gemfile里的所有Gem被添加到LOAD_PATH中去。因此，Bundler.setup的行为类似于gem方法，用于帮助我们将特定版本的Gem载入到LOAD_PATH。只不过Bundler提供了更为高级的机制，使得我们能够在Gemfile里集中地管理所有依赖，并且省去了一一添加依赖的繁琐过程。
+
+Bundler还提供了一个Bundler.require方法，该方法提供了比Bundler.setup更方便的特性，它将直接将Gemfile列举的依赖全部载入内存。关于使用Bundler.setup还是Bundler.require的讨论已经存在已久，无非就是Bundler.setup提供了一个妥协，使得程序可以滞后载入（Lazy Loading），从而减少不必要的加载，加快程序启动速度。而Bundler.require则主要是基于方便开发者（Programmer Friendly）的考量，它使开发者省去了大量的精力去显式地加载代码。
+
+另外一个问题是有关Gemfile.lock文件的。我们是否需要check in这个文件到代码库里？这里的答案要度时而定。首先，我们知道Gemfile一般指明了一个依赖版本范围（或者没有），当我们运行bundle install的之后，生成的Gemfile.lock实际上是指明了每个依赖Gem的一个固定版本(在满足Gemfile指明的版本范围前提下)。
+
+然后我们需要考虑这么一个convention，即我们开发Gem库的时候，我们总是希望我们的库能够和尽可能多版本的依赖Gem一同工作，而当我们开发应用的时候，我们往往希望我们依赖的Gem版本维持不变（因为此时的测试十分严格，将精确到Gem库的具体行为上），以保证我们的应用发布后十分稳定。
+
+综合以上我们得出了结论，在开发Gem的时候，我们不添加Gemfile.lock到代码库，因为我们希望其他开发者通过bundle install绑定到依赖库尽可能多的版本，借此保证我们的Gem能够和更多的依赖库协同工作。而当我们开发应用之时，我们希望所有的开发者以及用户，严格的使用和我一样的依赖库版本，这使的每个人使用的依赖库行为严格一致，从而保证了应用的健壮性。
+
+## 当Bundler遇见RubyGem - Gem开发者需要知道的
+
+第一次使用bundler的时候，在为其精妙的设计而感叹的之际，一个疑问始终萦绕在我的心中：.gemspec和Gemfile这两个设计是不是过于冗余了？我们在开发Gem的时候，明明已经有.gemspec（RubyGem的一部分）指出依赖关系了，为什么此时Bundler还要鸡肋地设计一个Gemfile呢？
+
+为了说明其原因，我们必须先回答一个基本问题：.gemspec和Gemfile分别是干嘛的？我们知道，.gemspec主要是用来描述Gem的元数据信息的，我们除了可以在此包含Gem的基本信息之外，还能够在此指出本Gem具体依赖于哪些其他Gem。不过，值得注意的是，这里仅仅是指出依赖关系，.gemspec并没有提供任何机制告诉我们，到哪里才能下载并部署这些被依赖的Gem。
+
+.gemspec之所以缺少运行时的支持，那是因为下载、部署、以及载入并不是其设计之初的职责所在。这些问题是被后来者Bundler解决的。那么，既然搞清了其用途上的差异，我们又当如何解决其内容的冗余这个问题呢？答案很简单，在Gemfile文件中调用gemspec方法，它会自动告诉Bundler到同目录下查找.gemspec文件并载入其中指明的Gem依赖。
+ 
+## Rails的代码载入机制
+
+Rails开发者倾向于不使用显式的代码载入机制，为了实现这个目的，Rails使用了大量的自动载入机制。其一便是autoload，关于它的原理，以后我会撰文剖析。autoload主要用于载入Rails自己的组件，而对于依赖Gem的载入，Rails使用了Bundler.require机制。在Rails项目的文件config/application.rb负责实现此特性：
+
+``` ruby
+# Assets should be precompiled for production (so we don't need the gems loaded then)
+Bundler.require(*Rails.groups(assets: %w(development test)))
+```
+
+## 写在最后
+
+代码载入看似很简单，只不过是将代码读入内存并且编译。可是，将这个需求放到真正的工程世界之后，情况便大不相同了。我们需要同时管理多个版本的组件，我们需要载入特定版本的组件，我们还需要解析某个组件的依赖……诸如此类的问题将代码载入这个话题无限扩大了，以至于Ruby后来才有了RubyGem、Bundler等一系列的工具、程序库来解决这些问题。我们要了解这个话题，不仅仅是一个技术人热爱技术的本性使然，更是为了在现实世界复杂的开发、运行环境里，更好的实现我们的目的（DO Things Right）。愿与诸君共勉！
