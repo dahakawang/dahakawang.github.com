@@ -1,0 +1,202 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>PE文件格式系列（一）——探究PE文件常见Section作用 - 死亡的飞翔</title>
+	<meta name="author" content="王凯强">
+
+	
+	<meta name="description" content="最近由于各种原因想要研究一下PE文件，要彻底研究PE和COFF文件格式当然是非研究微软自己的技术白皮书——《Microsoft Portable Executable and Common Object File Format Specification》不可了。于是花了一点时间看看，有些心得， &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="死亡的飞翔" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
+
+</head>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">死亡的飞翔</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:dahakawang.github.com">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:dahakawang.github.com">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">PE文件格式系列（一）——探究PE文件常见Section作用</h2>
+	<div class="entry-content"><p>最近由于各种原因想要研究一下PE文件，要彻底研究PE和COFF文件格式当然是非研究微软自己的技术白皮书——《Microsoft Portable Executable and Common Object File Format Specification》不可了。于是花了一点时间看看，有些心得，和大家分享一下。</p>
+
+<!-- more -->
+
+<p>首先本文不是讨论PE文件格式本身的，这属于技术规范的范畴，大家要是感兴趣可以参看上文中提到的微软的资料。要是不太喜欢E文的朋友也可以在网上找到很多描述PE格式的文章，在就不再这里赘述了。再说，就算我想讲，估计也讲不好（受限于本人的语文水平orz）</p>
+
+<p>我们都很清楚，实际上PE格式文件里面的section这个东西是个很自由的玩意儿，你想把神马数据，代码划分到哪个section完全是你的自由。我们一般按照数据所需的属性来进行section的划分，比如我们把代码放到.text section而把数据放到.data section里。但是这种划分并没有什么约束限制：首先只要你愿意，你完全可以把代码放在一个叫做stupid的section里（当然这个名字按照PE标准不能超过8个字节）；其次同一个section中也不是只能有一种数据，比如我可以把程序的符号表同常量数据一同放在.data里（当然现实中他们是分开来的）。</p>
+
+<p>section的存在并不是为了以数据功能为准则划分数据，而是以数据属性为标准来归类数据。哪些属性？就是可读性、可写性以及可执行性。为什么代码放在.text里？那是因为代码是可读可执行但不可写的；为什么我可以将常量数据和程序符号数据放在一起？因为他们都是可读但不可写亦不可执行的；为什么常量数据和全局数据却不能放到一起？那是因为前者要求不可读但后者却要求这个属性。</p>
+
+<p>了解了section这个东西，下面我们就来分析一下Win32程序中常见的一些section吧（说常见也只能说微软的linker生成的程序是这样了，而其他诸如Borland的连接器可不一定使用下面这些section名字）：</p>
+
+<p><strong>.text</strong> - 不多说了，就是保存代码的节</p>
+
+<p><strong>.data</strong> - 保存数据的节，这个对应C语言中以初始化的全局变量数据。想想为什么你在源码里初始化一个全局变量后运行时这个变量的值正是你想要的那个？int a = 12;并不意味着CRT为你执行了一个赋值语句，而是a在PE文件中保存的位置已经被硬编码了一个12的值。这样loader加载程序时，你给的初值被从PE文件读取到了内存中变量a的位置，这样才使你的变量a有了初值。</p>
+
+<p><strong>.rdata</strong> - 保存常量数据的节。这个可以对应C语言中的常数和常量字符串，同上面一样的原因，他们的初值被保存到了PE文件的次Section中，而不是在运行时被赋值。</p>
+
+<p><strong>.bss</strong> - (Block Start with Symbol)这个section对应C程序中的全局未初始化变量。啥？你说C中未初始化的全局变量实际上全被初始化成了0？这是因为实际上操作系统是这样干的——你的全局未初始化变量由于没有初值，所以不需要将值像上面两个一样保存到PE文件中（所以.bss节除了描述信息之外不占据磁盘空间），但是.bss会描述一段内存区域，loader在加载.bss section时直接开辟这么一块包括所有未初始化数据的内存区域，然后直接将这区域清零。这就是C中全局未初始化数据之所以为零的原因了。</p>
+
+<p><strong>.idata</strong> - 这个是保存程序导入表(Import Table)的节。当然，IT、ILT以及IAT也常常被保存在.rdata中，为什么？是考虑到安全的因素，所以将IAT放在不可写的.rdata里以防止IAT被恶意更改从而造成程序的安全隐患吧。</p>
+
+<p><strong>.edata</strong> - 这个是保存导处表的(Export Table)的节。</p>
+
+<p><strong>.reloc</strong> - 这个节是保存重定位数据的</p>
+
+<p><strong>.rsrc</strong> - 这节是保存程序资源的。想你的程序字符串啊、对话框模板啊、位图、鼠标光标什么的都在这里。实际上这个节储存.resx文件编译后的结果。</p>
+
+<p><strong>.textbss</strong> - 这节比较好玩，它是和微软Incremental Linking(增量链接)特性相关的。关于Incremental的特性，我在<a href="/blog/2011/08/01/about-vc-increamental-linking-and-textbss/">这篇文章</a>中有说明。</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-08-01T20:40:00+08:00" pubdate data-updated="true">Aug 1<span>st</span>, 2011</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/yuan-li-tan-qiu/'>原理探求</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2011/08/01/the-common-sections-in-pe-format/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2013
+
+
+<a href="mailto:DevilDavidWang@gmail.com">
+
+
+    王凯强
+
+
+</a>
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'dahakawangtechblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://dahakawang.github.com/blog/2011/08/01/the-common-sections-in-pe-format/';
+        var disqus_url = 'http://dahakawang.github.com/blog/2011/08/01/the-common-sections-in-pe-format/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>

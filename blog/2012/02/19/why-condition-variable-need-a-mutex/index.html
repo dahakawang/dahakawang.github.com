@@ -1,0 +1,272 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>关于Condition Variable为什么需要一个Mutex的思考 - 死亡的飞翔</title>
+	<meta name="author" content="王凯强">
+
+	
+	<meta name="description" content="Linux下： 1
+2
+3
+4
+pthread_mutex_lock(&amp;mutex);
+pthread_cond_wait(&amp;cond, &amp;mutex);
+doSomething();
+pthread_mutex_unlock(&amp;mutex); java里： 1 &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="死亡的飞翔" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
+
+</head>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">死亡的飞翔</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:dahakawang.github.com">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:dahakawang.github.com">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">关于Condition Variable为什么需要一个Mutex的思考</h2>
+	<div class="entry-content"><ol>
+  <li>Linux下：</li>
+</ol>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+</pre></td><td class="code"><pre><code class="c"><span class="line"><span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span>
+</span><span class="line"><span class="n">pthread_cond_wait</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cond</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span>
+</span><span class="line"><span class="n">doSomething</span><span class="p">();</span>
+</span><span class="line"><span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<!-- more -->
+
+<ol>
+  <li>java里：</li>
+</ol>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+</pre></td><td class="code"><pre><code class="java"><span class="line"><span class="kd">synchronized</span><span class="o">(</span><span class="k">this</span><span class="o">){</span>
+</span><span class="line">    <span class="n">wait</span><span class="o">();</span>
+</span><span class="line">    <span class="n">doSomething</span><span class="o">();</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<ol>
+  <li>C#里：</li>
+</ol>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+</pre></td><td class="code"><pre><code class="c#"><span class="line"><span class="n">monitor</span><span class="p">.</span><span class="n">Enter</span><span class="p">();</span>
+</span><span class="line"><span class="n">monitor</span><span class="p">.</span><span class="n">Wait</span><span class="p">();</span>
+</span><span class="line"><span class="n">doSomething</span><span class="p">();</span>
+</span><span class="line"><span class="n">monitor</span><span class="p">.</span><span class="n">Exit</span><span class="p">();</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<ol>
+  <li>使用Win32API</li>
+</ol>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+</pre></td><td class="code"><pre><code class="c"><span class="line"><span class="n">EnterCriticalSection</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">cs</span><span class="p">);</span>
+</span><span class="line"><span class="n">SleepConditionVariableCS</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">cond</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">cs</span><span class="p">,</span> <span class="n">INFINITE</span><span class="p">);</span>
+</span><span class="line"><span class="n">doSomething</span><span class="p">();</span>
+</span><span class="line"><span class="n">LeaveCriticalSection</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">cs</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>不难看到，不管是哪种语言，不论使用什么程序库，无论在windows下亦或是Linux下，condition variable这个东西的用法似乎都是固定的：必须和一把锁搭配使用。</p>
+
+<p>可是，问题是为什么这些库、框架、系统的设计者，在设计这套机制的时候，非要让我们好死不死再和一把锁一块儿使用呢？做这种费力不讨好的事儿，到底是因为历史原因，还是另有深意呢？</p>
+
+<p>为了回答这个问题，首先考虑这么一个生产者消费者的场景。生产者会生产数据将其放到dataHandler对象中，然后向消费者发送一条消息。消费者也有dataHandler示例的句柄，并且在接收到生产者的消息后，它将通过dataHandler.getData()来获取数据。假设这个世界上的condition variable全是没有mutex机制的，则消费者的实现代码可能是这样的：</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+</pre></td><td class="code"><pre><code class="c"><span class="line"><span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">bDataReady</span><span class="p">){</span>
+</span><span class="line">     <span class="n">pthread_cond_wait</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sigDataReady</span><span class="p">);</span> <span class="c1">//根据假设，我们现在不需要锁了</span>
+</span><span class="line"><span class="p">}</span>
+</span><span class="line"><span class="n">data</span> <span class="o">=</span> <span class="n">dataHandler</span><span class="p">.</span><span class="n">getData</span><span class="p">();</span>
+</span><span class="line"><span class="n">dataHandler</span><span class="p">.</span><span class="n">releaseData</span><span class="p">();</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>代码的逻辑十分简单。但是，现在我们考虑一下，如果有以下执行顺序：</p>
+
+<ul>
+  <li>消费者：检查bDataReady不为真</li>
+  <li>生产者：设置bDataReady为true</li>
+  <li>生产者：发送消息</li>
+  <li>消费者：等待condition variable</li>
+</ul>
+
+<p>这时，虽然生产者通知了资源的可用，但由于这时候消费者尚未开始等待消息，也就没能接收到这个消息，于是只能在消息消失后无尽地等待下去。另一方面，由于消费者一直的等待，导致资源不被消费，在糟糕的情况下生产者会等待消费者消费完毕。于是乎，死锁发生了。</p>
+
+<p>思考一下，为什么会发生死锁呢？其本质的原因在于生产者、消费者的行为没有保证原子性(Atomic)。这时候，我们要问了，既然pthread_cond_wait是系统级别的同步互斥工具，它怎么会不能保证原子性？当然，我并非指这个意义上的原子性。我们首先要知道condition variable的设计意图，实际上condition variable描述这么一种情景：在这个情境中，有一个人在等待一个特定事件，而另一个人会在该事件发生时告知前者。但是，condition variable本身只实现这么一种机制，它并不指出到底是什么事件发生了。因此，往往我们在等待成功，知道有事件发生的话，还需要额外代码来判断是哪个事件。注意，这就是整个问题的关键点：</p>
+
+<p>实际上我们在使用condition variable时，不仅要通condition variable实现通知和被通知，还要自行实现通知和被通知前后所必要的判断、处理等业务逻辑，这才是condition variable的使用模型。知道这个后，我们就能理解为什么上面的情景会出问题了。原因在于消费者的基本行为没有确保原子性，它的判断和等待被分隔了。</p>
+
+<p>我们当然可以争辩道，即使不通过和mutex合作，我们一样能使用这个假想的condition variable很好的完成功能。是的，我承认作为程序员你可以足够聪明和小心，以至于你实现的版本没有我上面这段代码的问题。但是，这难道不和你去跟设计mutex的人争辩说你明明可以自己通过精心设计实现互斥，根本不用mutex横插一脚这件事一样愚蠢且毫无意义么？谁也不能阻止你选择使用自己的办法，但是问题的关键是，我们需要一种有经过理论证明研究过的可靠的、统一的方法，因为软件开发在大部分情况下是一门工程，而不是一门任你发挥的艺术。</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-19T23:37:00+08:00" pubdate data-updated="true">Feb 19<span>th</span>, 2012</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/yuan-li-tan-qiu/'>原理探求</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2012/02/19/why-condition-variable-need-a-mutex/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2013
+
+
+<a href="mailto:DevilDavidWang@gmail.com">
+
+
+    王凯强
+
+
+</a>
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'dahakawangtechblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://dahakawang.github.com/blog/2012/02/19/why-condition-variable-need-a-mutex/';
+        var disqus_url = 'http://dahakawang.github.com/blog/2012/02/19/why-condition-variable-need-a-mutex/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>

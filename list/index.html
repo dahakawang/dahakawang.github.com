@@ -1,0 +1,619 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>死亡的飞翔</title>
+	<meta name="author" content="王凯强">
+
+	
+	<meta name="description" content="接触ruby有一段时间了，说起来自己和这门语言倒挺有缘。学生时代的时候，曾经沉迷于一款叫做RPG Maker的软件。当时和朋友以班上的同学为原型写了一部武侠剧，并计划用RPG Maker制作成游戏，乐此不疲。这个RPG Maker在内部使用了一门脚本语言来描述其游戏逻辑，这门语言便是Ruby。 &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="死亡的飞翔" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
+
+</head>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">死亡的飞翔</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:dahakawang.github.com">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:dahakawang.github.com">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner">
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2013/03/12/ruby-story-behind-require/">
+		
+			【Ruby】require背后的故事</a>
+	</h2>
+	<div class="entry-content">
+		<p>接触ruby有一段时间了，说起来自己和这门语言倒挺有缘。学生时代的时候，曾经沉迷于一款叫做RPG Maker的软件。当时和朋友以班上的同学为原型写了一部武侠剧，并计划用RPG Maker制作成游戏，乐此不疲。这个RPG Maker在内部使用了一门脚本语言来描述其游戏逻辑，这门语言便是Ruby。于是乎为了修改游戏框架、拓展引擎原有特性，自己花了不少功夫学习Ruby。可惜最后，由于高考临近，Ruby随着RPG Maker一块儿，淹没在了记忆的深处。</p>
+
+
+		
+		<a href="/blog/2013/03/12/ruby-story-behind-require/" class="more-link">阅读全文 &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-12T14:39:00+08:00" pubdate data-updated="true">Mar 12<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/rubyxiang-guan/'>Ruby相关</a>, <a class='category' href='/blog/categories/yuan-li-tan-qiu/'>原理探求</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2013/03/12/ruby-story-behind-require/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2012/06/22/srs-audio-sandbox-cracked/">
+		
+			SRS Audio Sandbox破解纪实</a>
+	</h2>
+	<div class="entry-content">
+		<p>最近挺忙的，本来需要各种为前路做准备，无奈自己天生属于低血压型的人，偏偏就是提不起劲儿来干正事儿，却把大好的一天光阴全交代到SRS的分析工作上了。虽然说这多少算不务正业，不过由于本人有着严重的软件新版本强迫症，故这算是给自己的一个开脱理由吧。</p>
+
+<p>这款软件的破解工作展开比较容易，没有加壳，直接上工具分析之。首先请出OllyDBG来，通过查找字符串引用和查找API MessageBox引用的老法子，很容易就定位了大概的关键代码位置。</p>
+
+
+		
+		<a href="/blog/2012/06/22/srs-audio-sandbox-cracked/" class="more-link">阅读全文 &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-06-22T22:37:00+08:00" pubdate data-updated="true">Jun 22<span>nd</span>, 2012</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/ni-xiang-po-jie/'>逆向破解</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2012/06/22/srs-audio-sandbox-cracked/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2012/04/13/thoughts-on-exception-and-exception-handling/">
+		
+			关于异常和异常错误处理的思考</a>
+	</h2>
+	<div class="entry-content">
+		<p>程序员们无时无刻不在于Bug和错误做着斗争。早在面向过程的C语言时代，错误一般是通过函数接口的返回值来指定的。我们事先对接口做好返回值约定，然后调用者根据约定内容检查调函数回值，从而得知了函数调用的结果。典型的约定，有比如返回NULL表示调用失败，有比如返回0表示成功其他表示各种错误原因等等。这种方式在当时看上去是个比较完美的解决方案，但是，随着程序的规模增大，这种方式日渐显出了疲态。</p>
+
+
+		
+		<a href="/blog/2012/04/13/thoughts-on-exception-and-exception-handling/" class="more-link">阅读全文 &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-04-13T22:47:00+08:00" pubdate data-updated="true">Apr 13<span>th</span>, 2012</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/cheng-xu-si-kao/'>程序思考</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2012/04/13/thoughts-on-exception-and-exception-handling/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2012/03/03/android-bitmap-color-mode/">
+		
+			【译】Android位图颜色模式的问题</a>
+	</h2>
+	<div class="entry-content">
+		<p>最近开始了android上的编程之旅，在了解2D图形编程时，令人蛋疼的发觉android上仅支持ARGB8888、ARGB4444、RGB565以及Alpha 8这么几种颜色模式，而不支持RGB888这种格式。原本以为即使不支持RGB888我用ARGB8888总行吧，但后来了解到，即使我在内存中用ARGB888颜色模型表示图像，在该图像拷贝到屏幕帧缓冲区的过程中，它也会变成RGB565颜色模式。我们知道，RGB565最多只能表示2^16=65536种图像，这对于RGB888所能表示的2^24=16777216种颜色来说显然在表现力上要略逊一筹。这集中表现在显示某些带有渐变效果的图片时，出现了一条条的颜色带，而不是原始的平滑的渐变效果。后来得知android使用了Dither(抖动)这种技术，以欺骗人类眼球的方式加以补偿。</p>
+
+<p>当然，以这个问题为出发点，后来又引发了诸多问题，而这篇文章解决了我不少问题，特在这里翻译出来供大家分享之。</p>
+
+
+		
+		<a href="/blog/2012/03/03/android-bitmap-color-mode/" class="more-link">阅读全文 &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-03-03T20:02:00+08:00" pubdate data-updated="true">Mar 3<span>rd</span>, 2012</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/yuan-li-tan-qiu/'>原理探求</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2012/03/03/android-bitmap-color-mode/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2012/02/19/why-condition-variable-need-a-mutex/">
+		
+			关于Condition Variable为什么需要一个Mutex的思考</a>
+	</h2>
+	<div class="entry-content">
+		<ol>
+  <li>Linux下：</li>
+</ol>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+</pre></td><td class="code"><pre><code class="c"><span class="line"><span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span>
+</span><span class="line"><span class="n">pthread_cond_wait</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cond</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span>
+</span><span class="line"><span class="n">doSomething</span><span class="p">();</span>
+</span><span class="line"><span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+		
+		<a href="/blog/2012/02/19/why-condition-variable-need-a-mutex/" class="more-link">阅读全文 &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-02-19T23:37:00+08:00" pubdate data-updated="true">Feb 19<span>th</span>, 2012</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/yuan-li-tan-qiu/'>原理探求</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2012/02/19/why-condition-variable-need-a-mutex/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2011/10/19/how-a-program-is-born/">
+		
+			Hello World程序背后的故事解密（二）—— 程序之生</a>
+	</h2>
+	<div class="entry-content">
+		<p>近几个月实在是太忙了，偶然想起来博客上一看，离上次写文章居然过了两个月有余，于是手痒痒想加把劲，再码点儿技术文上来^_^</p>
+
+<p>这个系列是为了挖掘出一个简单的类似Hello World程序隐藏在CRT之下的复杂性，因此在上次分析了“编译器选项和CRT”之后，今天我想再来简单分析一下从程序进程建立直到程序运行到C/C++入口函数处发生的那点儿事儿。</p>
+
+
+		
+		<a href="/blog/2011/10/19/how-a-program-is-born/" class="more-link">阅读全文 &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-10-19T16:03:00+08:00" pubdate data-updated="true">Oct 19<span>th</span>, 2011</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/yuan-li-tan-qiu/'>原理探求</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2011/10/19/how-a-program-is-born/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2011/08/06/a-dialer-cracked/">
+		
+			记一款宽带拨号器加密算法逆向实例</a>
+	</h2>
+	<div class="entry-content">
+		<p>这两天闲来无事，想起来许久之前曾答应朋友试着分析一下这个拨号器加密方式，花了几天时间分析，于是有了本文。下面将描述加密过程的技术细节，以及一些破解的心得。</p>
+
+<p>首先，该拨号器存在三个平台的三个版本，但鉴于Windows下拨号过程需经过两次麻烦的握手（一次失败拨号，获取失败的返回值并参与第二次加密过程，从而最终生成密文），我最终选择了Linux版本来进行分析。</p>
+
+
+		
+		<a href="/blog/2011/08/06/a-dialer-cracked/" class="more-link">阅读全文 &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-08-06T14:24:00+08:00" pubdate data-updated="true">Aug 6<span>th</span>, 2011</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/ni-xiang-po-jie/'>逆向破解</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2011/08/06/a-dialer-cracked/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2011/08/01/about-vc-increamental-linking-and-textbss/">
+		
+			关于Visual C++增量链接以及.textbss</a>
+	</h2>
+	<div class="entry-content">
+		<p>好的，文接上回，本文我就来讲讲微软link.exe连接器的Incremental Liking这个特性。当然这个其实不是微软linker独有的特性，很多链接器都有这个特性，这个特性实际上是为了提高链接速度的。</p>
+
+<p>想象一下这个场景，我写了两个函数foo()和bar()，其中foo()在0x400100处而bar()紧接着保存在0x400200处。现在我将foo()改写了一下，添加了一些perfect的功能，然后编译了新的代码。不过现在的麻烦是foo()不可避免的变大了，他现在需要200h字节来保存了。那么链接器该怎么办？</p>
+
+
+		
+		<a href="/blog/2011/08/01/about-vc-increamental-linking-and-textbss/" class="more-link">阅读全文 &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-08-01T22:08:00+08:00" pubdate data-updated="true">Aug 1<span>st</span>, 2011</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/yuan-li-tan-qiu/'>原理探求</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2011/08/01/about-vc-increamental-linking-and-textbss/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2011/08/01/the-common-sections-in-pe-format/">
+		
+			PE文件格式系列（一）——探究PE文件常见Section作用</a>
+	</h2>
+	<div class="entry-content">
+		<p>最近由于各种原因想要研究一下PE文件，要彻底研究PE和COFF文件格式当然是非研究微软自己的技术白皮书——《Microsoft Portable Executable and Common Object File Format Specification》不可了。于是花了一点时间看看，有些心得，和大家分享一下。</p>
+
+
+		
+		<a href="/blog/2011/08/01/the-common-sections-in-pe-format/" class="more-link">阅读全文 &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-08-01T20:40:00+08:00" pubdate data-updated="true">Aug 1<span>st</span>, 2011</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/yuan-li-tan-qiu/'>原理探求</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2011/08/01/the-common-sections-in-pe-format/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2011/07/22/compiler-and-c-runtime/">
+		
+			Hello World程序背后的故事解密（一）—— 编译器的选项和C运行时库</a>
+	</h2>
+	<div class="entry-content">
+		<p>作为一个程序员，想必大家都会对HelloWorld这个程序是深有感触吧。是的，就是这个程序第一次带我们进入了神奇的计算机编程的世界，指引我们开始走上了程序员这条充满了艰辛和快乐的路。HelloWorld对我们这群程序员来讲意义是非比寻常的，因此我想更加深入的研究一下C语言版的HelloWorld程序，撕开它的外衣，将隐藏在简单表象下的运行时秘密拿出来给各位看看。</p>
+
+
+		
+		<a href="/blog/2011/07/22/compiler-and-c-runtime/" class="more-link">阅读全文 &rarr;</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-07-22T16:03:00+08:00" pubdate data-updated="true">Jul 22<span>nd</span>, 2011</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/yuan-li-tan-qiu/'>原理探求</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2011/07/22/compiler-and-c-runtime/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+<nav id="pagenavi">
+    
+    
+    <div class="center"><a href="/archives">文章归档</a></div>
+</nav>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2013
+
+
+<a href="mailto:DevilDavidWang@gmail.com">
+
+
+    王凯强
+
+
+</a>
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'dahakawangtechblog';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>

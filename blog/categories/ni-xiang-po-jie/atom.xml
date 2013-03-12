@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: 逆向破解 | 死亡的飞翔]]></title>
+  <link href="http://dahakawang.github.com/blog/categories/ni-xiang-po-jie/atom.xml" rel="self"/>
+  <link href="http://dahakawang.github.com/"/>
+  <updated>2013-03-12T20:31:11+08:00</updated>
+  <id>http://dahakawang.github.com/</id>
+  <author>
+    <name><![CDATA[王凯强]]></name>
+    <email><![CDATA[DevilDavidWang@gmail.com]]></email>
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[SRS Audio Sandbox破解纪实]]></title>
+    <link href="http://dahakawang.github.com/blog/2012/06/22/srs-audio-sandbox-cracked/"/>
+    <updated>2012-06-22T22:37:00+08:00</updated>
+    <id>http://dahakawang.github.com/blog/2012/06/22/srs-audio-sandbox-cracked</id>
+    <content type="html"><![CDATA[<p>最近挺忙的，本来需要各种为前路做准备，无奈自己天生属于低血压型的人，偏偏就是提不起劲儿来干正事儿，却把大好的一天光阴全交代到SRS的分析工作上了。虽然说这多少算不务正业，不过由于本人有着严重的软件新版本强迫症，故这算是给自己的一个开脱理由吧。</p>
+
+<p>这款软件的破解工作展开比较容易，没有加壳，直接上工具分析之。首先请出OllyDBG来，通过查找字符串引用和查找API MessageBox引用的老法子，很容易就定位了大概的关键代码位置。</p>
+
+<!-- more -->
+
+<p>找到关键位置后，顺手又记录了一下函数调用栈，然后打开了神器IDA。用IDA载入后，跳转到之前找到的关键代码RVA处，着手分析。说起来，我自己喜欢将动态和静态调试方法结合起来用，不如果不愿意太费神分析汇编代码，有时候直接看运行时结果便是最直观和省时的。载入后发觉之前判断的关键点实际上是CWinApp::ShowAppMessageBox函数，继续沿着刚才记录的函数运行时调用栈往上找，依次顺藤摸瓜：AfxMessageBox—&gt;Sub44D240，这才到了SRS程序的代码领空，于是正是着手分析。（IDA这个静态分析功能实在是强大，它可以根据二进制代码特征判断出其是否是库函数代码。这大大节省了我的时间，应为对这类代码我只需要看SDK文档就行了，而不需要去分析其实际的代码行为）</p>
+
+<p>进一步根据线索判断（Sub44D240里包含了SendMessage、AfxMessageBox、GetWindowText等函数，足以说明该函数的关键作用），我锁定在了Sub44D240函数的Sub4430F0调用上，继续追踪到Sub442FF0上，继而是Sub44B9E0过程，最终到了Sub44BC30过程上。在该过程中，我同时追踪到了用户输入的ProductID以及Serial Number等信息，这进一步是我确认了我的判断。</p>
+
+<p>该过程具体代码如下：</p>
+
+<p>``` nasm Sub44BC30代码</p>
+
+<p>.text:0044BC30
+  .text:0044BC30 ; =============== S U B R O U T I N E =======================================
+  .text:0044BC30
+  .text:0044BC30 ; Attributes: bp-based frame
+  .text:0044BC30
+  .text:0044BC30 check_PID_SN    proc near               ; CODE XREF: realCheckSN+182p
+  .text:0044BC30
+  .text:0044BC30 productId_segs_temp= dword ptr -14h
+  .text:0044BC30 new_ProdectID   = dword ptr -10h
+  .text:0044BC30 sn_lowerDWord   = dword ptr -4
+  .text:0044BC30 SN              = dword ptr  8
+  .text:0044BC30
+  .text:0044BC30                 push    ebp
+  .text:0044BC31                 mov     ebp, esp
+  .text:0044BC33                 and     esp, 0FFFFFFF8h
+  .text:0044BC36                 sub     esp, 14h
+  .text:0044BC39                 push    ebx
+  .text:0044BC3A                 push    esi
+  .text:0044BC3B                 push    edi
+  .text:0044BC3C                 push    14h             ; unsigned int
+  .text:0044BC3E                 mov     ebx, eax        ; ebx指向ProductID首位置
+  .text:0044BC40                 call    j<em>??2@YAPAXI@Z  ; operator new(uint)
+  .text:0044BC45                 mov     esi, eax
+  .text:0044BC47                 lea     eax, [esi+6]
+  .text:0044BC4A                 push    eax
+  .text:0044BC4B                 mov     eax, [ebp+SN]
+  .text:0044BC4E                 lea     ecx, [esi+4]
+  .text:0044BC51                 push    ecx
+  .text:0044BC52                 lea     edx, [esi+2]
+  .text:0044BC55                 push    edx
+  .text:0044BC56                 push    esi             ; 新申请的14h的空间
+  .text:0044BC57                 push    offset a4x4x4x4x ; “%4x-%4x-%4x-%4x”
+  .text:0044BC5C                 push    eax             ; SN首地址
+  .text:0044BC5D                 call    String2Integer  ; 将字符串SN转换为数组，比如
+  .text:0044BC5D                                         ; “E6E9-24CB-2968-09BC”变为
+  .text:0044BC5D                                         ; E9 E6 …
+  .text:0044BC62                 mov     ecx, [esi+4]    ; ECX为后半部分SN
+  .text:0044BC65                 mov     edi, [esi]      ; EDI为前半部分SN
+  .text:0044BC67                 push    esi             ; void *
+  .text:0044BC68                 mov     [esp+40h+sn_lowerDWord], ecx
+  .text:0044BC6C                 call    j__free
+  .text:0044BC71                 lea     edx, [esp+40h+productId_segs_temp]
+  .text:0044BC75                 push    edx
+  .text:0044BC76                 push    offset a4x      ; “%4x”
+  .text:0044BC7B                 push    ebx
+  .text:0044BC7C                 call    String2Integer  ; 将ProductID第一段转换为Word
+  .text:0044BC81                 mov     esi, [esp+4Ch+productId_segs_temp] ; esi储存productId</em>1
+  .text:0044BC85                 lea     eax, [esp+4Ch+productId_segs_temp]
+  .text:0044BC89                 push    eax
+  .text:0044BC8A                 lea     ecx, [ebx+0Ah]
+  .text:0044BC8D                 push    offset asc<em>48C804 ; “%x”
+  .text:0044BC92                 push    ecx
+  .text:0044BC93                 call    String2Integer
+  .text:0044BC98                 mov     edx, [esp+58h+productId_segs_temp] ; EDX储存ProductId</em>2
+  .text:0044BC9C                 add     esp, 38h
+  .text:0044BC9F                 xor     eax, eax
+  .text:0044BCA1                 push    eax
+  .text:0044BCA2                 push    esi
+  .text:0044BCA3                 push    eax
+  .text:0044BCA4                 push    edx
+  .text:0044BCA5                 call    <em>_allmul
+  .text:0044BCAA                 mov     esi, eax        ; product</em>1*product<em>2乘积的低word放入esi
+  .text:0044BCAC                 lea     eax, [esp+20h+productId_segs_temp]
+  .text:0044BCB0                 push    eax
+  .text:0044BCB1                 lea     ecx, [ebx+14h]
+  .text:0044BCB4                 push    offset asc</em>48C804 ; “%x”
+  .text:0044BCB9                 push    ecx
+  .text:0044BCBA                 mov     [esp+2Ch+new_ProdectID+4], edx
+  .text:0044BCBE                 call    String2Integer
+  .text:0044BCC3                 mov     edx, [esp+2Ch+new_ProdectID+4]
+  .text:0044BCC7                 mov     eax, [esp+2Ch+productId_segs_temp] ; eax保存productId<em>3
+  .text:0044BCCB                 add     esp, 0Ch
+  .text:0044BCCE                 push    edx
+  .text:0044BCCF                 push    esi
+  .text:0044BCD0                 push    0
+  .text:0044BCD2                 push    eax
+  .text:0044BCD3                 call    __allmul
+  .text:0044BCD8                 lea     ecx, [esp+20h+productId_segs_temp]
+  .text:0044BCDC                 push    ecx
+  .text:0044BCDD                 push    offset asc</em>48C804 ; “%x”
+  .text:0044BCE2                 add     ebx, 1Eh
+  .text:0044BCE5                 push    ebx
+  .text:0044BCE6                 mov     esi, eax
+  .text:0044BCE8                 mov     [esp+2Ch+new_ProdectID+4], edx
+  .text:0044BCEC                 call    String2Integer
+  .text:0044BCF1                 mov     edx, [esp+2Ch+new_ProdectID+4]
+  .text:0044BCF5                 mov     eax, [esp+2Ch+productId_segs_temp]
+  .text:0044BCF9                 add     esp, 0Ch
+  .text:0044BCFC                 push    edx
+  .text:0044BCFD                 push    esi
+  .text:0044BCFE                 push    0
+  .text:0044BD00                 push    eax
+  .text:0044BD01                 call    <em>_allmul        ; 结果edx高位,eax低位
+  .text:0044BD06                 mov     esi, edx
+  .text:0044BD08                 shr     esi, 10h
+  .text:0044BD0B                 mov     [esp+20h+new_ProdectID], eax
+  .text:0044BD0F                 mov     [esp+20h+new_ProdectID+4], edx
+  .text:0044BD13                 xor     ebx, ebx
+  .text:0044BD15                 mov     cl, 10h
+  .text:0044BD17                 call    __allshr        ; {edx,eax}==new_prodectID » 10h
+  .text:0044BD1C                 mov     ecx, [esp+20h+new_ProdectID+4]
+  .text:0044BD20                 xor     edx, edx
+  .text:0044BD22                 push    1
+  .text:0044BD24                 and     eax, 0FFFF0000h
+  .text:0044BD29                 push    edx
+  .text:0044BD2A                 add     esi, eax
+  .text:0044BD2C                 adc     ebx, edx
+  .text:0044BD2E                 mov     edx, [esp+28h+new_ProdectID]
+  .text:0044BD32                 push    ecx
+  .text:0044BD33                 push    edx
+  .text:0044BD34                 call    __allmul        ; eax=0, edx为new_productID的低位
+  .text:0044BD39                 push    0
+  .text:0044BD3B                 add     esi, eax
+  .text:0044BD3D                 push    8475h
+  .text:0044BD42                 adc     ebx, edx
+  .text:0044BD44                 push    ebx
+  .text:0044BD45                 push    esi
+  .text:0044BD46                 call    __alldiv        ; {edx,eax} == {edx,esi} / 0x8475
+  .text:0044BD4B                 push    0
+  .text:0044BD4D                 push    0AE6000h
+  .text:0044BD52                 push    edx
+  .text:0044BD53                 push    eax
+  .text:0044BD54                 call    __allmul
+  .text:0044BD59                 add     eax, 91F2884Dh
+  .text:0044BD5E                 adc     edx, 2DCh
+  .text:0044BD64                 mov     cl, 0Ah
+  .text:0044BD66                 call    __allshr
+  .text:0044BD6B                 push    0
+  .text:0044BD6D                 push    2046h
+  .text:0044BD72                 push    edx
+  .text:0044BD73                 push    eax
+  .text:0044BD74                 call    __allmul
+  .text:0044BD79                 mov     ecx, 0FFFFFFFEh
+  .text:0044BD7E                 sub     ecx, eax
+  .text:0044BD80                 mov     eax, 0FFFFFFFFh
+  .text:0044BD85                 sbb     eax, edx
+  .text:0044BD87                 mov     edx, [esp+20h+sn_lowerDWord]
+  .text:0044BD8B                 shld    edx, edi, 1
+  .text:0044BD8F                 add     edi, edi
+  .text:0044BD91                 cmp     edi, ecx
+  .text:0044BD93                 jnz     short loc</em>44BDA5
+  .text:0044BD95                 cmp     edx, eax
+  .text:0044BD97                 jnz     short loc<em>44BDA5
+  .text:0044BD99                 mov     eax, 1
+  .text:0044BD9E                 pop     edi
+  .text:0044BD9F                 pop     esi
+  .text:0044BDA0                 pop     ebx
+  .text:0044BDA1                 mov     esp, ebp
+  .text:0044BDA3                 pop     ebp
+  .text:0044BDA4                 retn
+  .text:0044BDA5 ; —————————————————————————
+  .text:0044BDA5
+  .text:0044BDA5 loc</em>44BDA5:                             ; CODE XREF: check_PID_SN+163j
+  .text:0044BDA5                                         ; check_PID_SN+167j
+  .text:0044BDA5                 pop     edi
+  .text:0044BDA6                 pop     esi
+  .text:0044BDA7                 xor     eax, eax
+  .text:0044BDA9                 pop     ebx
+  .text:0044BDAA                 mov     esp, ebp
+  .text:0044BDAC                 pop     ebp
+  .text:0044BDAD                 retn
+  .text:0044BDAD check_PID_SN    endp
+```</p>
+
+<h2 id="section">基本思路</h2>
+
+<p>通过分析，我了解到，其算法大概思路如下：首先，注册流程有效输入为Serial Number和Product ID，Registration No实际上没有参与注册的验证计算过程。SRS通过系统各种信息生成Product ID，然后用户需要提供与Product ID匹配的Serial Number方能注册。当然，Serial Number是需要你拿美刀换的。</p>
+
+<p>简而言之，SRS将Product ID作fp变换，得到一个64bit长的整数，并将用户输入的序列号做fs变换同样得到一个64bit长整数。为了使注册成功，需要满足：</p>
+
+<pre><code>fp(gen()) = fs(SerialNumber) 成立      (1)
+</code></pre>
+
+<p>这其中，gen()的算法我们不需要管，因为其结果在界面Product ID框中已经显示了。我们需要找到fp和fs的实现算法，并顺利推出fs-1的实现。从而：
+SerialNumber = fs<sup>-1</sup>( fp(ProductID) )   (2)</p>
+
+<h2 id="product-id">Product ID变换算法描述</h2>
+
+<p>我们首先描述fp的实现。fp基本上是由我不知道原理的各种数值变换组成，为了精确表述，我直接用C语言描述：</p>
+
+<p>``` c
+Product ID变换函数描述
+ __int64 getProductID(char* id){
+     __int64 temp = 1;
+     DWORD elem;</p>
+
+<pre><code> for(int i = 0; i &lt; 4; i++){
+     sscanf(id + (i * 5), "%x", &amp;elem);
+     temp *= elem;
+ }
+ 
+ //高地位变换
+ DWORD lowerDWord = temp; 
+ DWORD upperDWord = temp &gt;&gt; 0x20;
+ WORD lower = upperDWord;
+ WORD upper = upperDWord &gt;&gt; 0x10;
+ upperDWord = lower;
+ upperDWord &lt;&lt;= 0x10;
+ upperDWord |= upper;
+ 
+ temp = lowerDWord;
+ temp &lt;&lt;= 0x20;
+ temp |= upperDWord;
+ 
+ 
+ temp /= 0x8475;
+ temp *= 0xAE6000;
+ temp += 0x2DC91F2884D;
+ temp &gt;&gt;= 0xA;
+ temp *= 0x2046;
+ temp = 0xfffffffffffffffe - temp;
+ 
+ return temp;  } ```
+</code></pre>
+
+<h2 id="serial-number">Serial Number变换算法描述　　</h2>
+
+<p>接下来描述fs函数的实现。我们称变换后的Product ID为TransPID，并且LowerDW和HighDW表示一个64bit整数的低双字和高双字，shld表示对应汇编指令的函数,TransSerialNumberHighDW和TransSerialNumberLowDW分别表示变换后的序列号高双字和低双字。则有：</p>
+
+<pre><code>TransSerialNumberHighDW(SerialNumber)=shld(UpperDW(SerialNumber),LowerDW(SerialNumber),1)（3）
+TransSerialNumberLowDW(SerialNumber) = LowerDW(SerialNumber) + LowerDW(SerialNumber)；　　　 （4）
+fs(SerialNumber) =   TransSerialNumberHighDW&lt;&lt; 32 | TransSerialNumberLowDW；　　　　　　　　　（5）
+</code></pre>
+
+<h2 id="serial-number-1">Serial Number逆向变换算法描述</h2>
+
+<p>了解了fs的实现，我们接下来需要着手研究实现fs-1的思路。由于fs高双字和低双字分别由不同的方式变换的（3）、（4），所以我们需要分别求出SerialNumber的高低双字。得到Serial Number的低双字很简单，由（4）可知，我们只要将LowerDW(fp(ProductID))除以2就行。但需注意的是，整个双字值域中，LowerDW(fp(ProductID)) / 2 + (2«31)同样能满足条件（由于溢出导致的相等），这点很重要！</p>
+
+<p>再来考虑高位的算法。我们需要把HighDW(fp(ProductID))往右移一位，这是左边补入的一位可以任意。这时需要注意，考虑到shld性质，有以下两种情况：</p>
+
+<ol>
+  <li>
+    <p>如果HighDW(fp(ProductID))最低位是1则需要LowerDW(SerialNumber)的最高位为1</p>
+  </li>
+  <li>
+    <p>如果HighDW(fp(ProductID))最低位是0则需要LowerDW(SerialNumber)的最高位为0</p>
+  </li>
+</ol>
+
+<p>考虑到LowerDW(fp(ProductID)) / 2和LowerDW(fp(ProductID)) / 2 + (2«31)均可满足条件，若是情况1则选取后者，因为此时可保证LowerDW(SerialNumber)的最高位为1。同理，若是情况2则需选择前者。</p>
+
+<p>该算法的C语言描述如下：</p>
+
+<p>``` c SerialNumber逆变换算法
+ void getSerialNumber(__int64 productId, char* buffer){
+     DWORD upper = productId » 0x20;
+     DWORD lower = productId;
+     assert((lower &amp; 1) == 0); //lower = snLower + snLower因此lower必须为偶数</p>
+
+<pre><code> DWORD snUpper = upper &gt;&gt; 1;
+ 
+ DWORD snLower =0;
+ if((upper &amp; 1) == 1){
+     snLower = lower / 2;
+     snLower += (1&lt;&lt;31);
+ }else{
+     snLower = lower / 2;
+ }
+ 
+ DWORDLONG sn = snUpper;
+ sn &lt;&lt;= 0x20;
+ sn |= snLower;
+ 
+ WORD *p = (WORD*)&amp;sn;
+ sprintf(buffer, "%04x-%04x-%04x-%04x", p[0], p[1], p[2], p[3]);  } ```
+</code></pre>
+
+<h2 id="section-1">小结</h2>
+
+<p>IDA很强大，Crack很费时间，收获的免费SRS使用权和投入的大量时间不成正比。结论：以后还是尽量少搞Crack吧。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[记一款宽带拨号器加密算法逆向实例]]></title>
+    <link href="http://dahakawang.github.com/blog/2011/08/06/a-dialer-cracked/"/>
+    <updated>2011-08-06T14:24:00+08:00</updated>
+    <id>http://dahakawang.github.com/blog/2011/08/06/a-dialer-cracked</id>
+    <content type="html"><![CDATA[<p>这两天闲来无事，想起来许久之前曾答应朋友试着分析一下这个拨号器加密方式，花了几天时间分析，于是有了本文。下面将描述加密过程的技术细节，以及一些破解的心得。</p>
+
+<p>首先，该拨号器存在三个平台的三个版本，但鉴于Windows下拨号过程需经过两次麻烦的握手（一次失败拨号，获取失败的返回值并参与第二次加密过程，从而最终生成密文），我最终选择了Linux版本来进行分析。</p>
+
+<!-- more -->
+
+<p>将拿到手的拨号器用IDA打开分析一下，发觉程序大部分数据都是不可识别的，整个程序只有一个段，且整个段是可读写执行的。这显然表明程序是加壳了的，只能动跟了。于是在虚拟机里跑一个ubuntu，在宿主机器上通过IDA对ubuntu里的拨号器进行远程调试。根据stack balance原则，我在一开始的esp处下硬件断点，当程序被断下来后再跑了几步就到了真正的OEP处了。不过这样很麻烦，每次都要大费周章才能找到OEP，但是苦于Linux下不知如何dump出可执行档映像，所以在分析的前一个阶段很是麻烦。后来在机缘巧合下发觉程序二进制档中包含UPX关键字，方知这是UPX加壳的，于是下载了官方的工具将程序脱壳了。</p>
+
+<p>脱壳后终于可以进行静态分析了，这时候IDA终于可以一展身手了。话又说回来，写这程序哥们儿爱忘事儿，居然没有把符号清除掉，这样我很轻易地就发觉了程序使用了LUA脚本。后来通过追踪，发觉程序附带的encrypt.data就是LUA脚本。这个脚本文件是干嘛的呢？实际上，为了迷惑分析者，这款软件将实际的加密过程用LUA脚本语言来实现，要不是作者粗心了，估计想要在不知道这是LUA脚本的前提下分析程序行为够呛，至少我得深入LUA虚拟机里分析代码行为了。</p>
+
+<p>发觉这一点后二话不说下载了LUA的源码，编译后开始执行这个脚本，但发觉执行失败，后来又用LUADec尝试恢复LUA编译后脚本的源代码也被告知失败。而他们的错误提示都是——Bad opcode。这样看来，作者是将官方LUA虚拟机的操作码给重新定义了。花了点时间研究对比了拨号程序和LUA官方解释器的代码，发觉实际上作者提替换方式为：</p>
+
+<table>
+<tr><td><b>官方操作码</b></td> <td><b>自定操作码</b></td></tr>
+<tr><td>MOVE</td> <td>LOADNIL</td></tr>
+<tr><td>LOADK</td> <td>LOADBOOL</td></tr>
+<tr><td>LOADBOOL</td> <td>LOADK</td></tr>
+<tr><td>LOADNIL</td> <td>MOVE</td></tr>
+</table>
+
+<p>找了些关于LUA官方二进制档格式的资料，自己写了一个转换软件，将这个不标准的LUA脚本文件转换为标准的LUA文件。本来想分析脚本行为直接得到解密算法的，但是首先反编译软件LUADec分析这个脚本直接crash了（后来查知这款软件尚不稳定），所以我不能直接分析LUA语言。再则我用ChunkSpy直接分析得出LUA的虚拟机代码，虽然我手头有LUA指令集参考，不过看着这个基于栈的方式工作的指令集我表示没有时间和兴趣再去分析了。</p>
+
+<p>于是采用了折中的方案，你的密文不是运行脚本得出的嘛。OK，那我也运行你的脚本不也得出密码了。不过说来简单，做着难。总体说来是由于LUA不支持位运算，在加密过程中它就将位运算委托给主程式完成。于是整个加密过程包含了大量的interop，无疑增加了我的工作量，因为我需要完成所有脚本调用的函数，并把它们注册到LUA环境中去——共12条函数。但是一旦补全所有函数，生成同拨号器一样的加密结果就是如探囊取物了——直接运行脚本就行了。</p>
+
+<p>下面我再将现有的分析结果总结一下：</p>
+
+<p>首先，加密程序会取4个自变量，分别是账号、密码、随机数、时间（Unix Time Stamp）。我们设他们为strUser, strPassword, rand#以及time。密文是由上述四个变量决定的，密文有ASCII编码，由以下域构成：</p>
+
+<p><img src="/images/blogs/2012/dialer_pw_structure.png" alt="" /></p>
+
+<p>对于A字段，这是常量字符串，也就是说这5个ASCII字符会被加到每个密文的开始。B字段是一个包含32个字符的区域，关于这个区段我下面再谈。</p>
+
+<p>C字段包含4个字符，它是这样计算而来：首先对strPassword每个字节（不包括NULL）累加得到sum，然后有key = rand# XOR sum;我们取key这个值的低16位转换为ASCII（刚好最多四个字符不是么）。得到的四个ASCII字符就是C字段。C字段会将B字段最后4个ASCII字符替换掉。</p>
+
+<p>D字段是原始账号，请注意原账号所有的字母将被转换为大写。</p>
+
+<p>B字段格式如下：</p>
+
+<pre><code>(B1）2010(B2)(B3)(B4)
+</code></pre>
+
+<p>其中B1长8个字符，是time转换为十六进制的ASCII值，2010是固定的4个字符，(B4)长4字符，他将被C字段替换。</p>
+
+<p>B2和B3都是长为8个字符的字节，但目前在没有分析LUA脚本的前提下我只知道B2 = fn1(strUser, strPassword, rand#, time), B3 = fn3(strUser, strPassword, rand#, time)。也即是说B2和B3和四个自变量均有关，且加密过程fn1或fn2至少有一个包括MD5算法。</p>
+
+<p>以上便是我目前为止的研究成果了，以上。</p>
+]]></content>
+  </entry>
+  
+</feed>

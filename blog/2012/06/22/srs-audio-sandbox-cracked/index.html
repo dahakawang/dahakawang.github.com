@@ -1,0 +1,674 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>SRS Audio Sandbox破解纪实 - 死亡的飞翔</title>
+	<meta name="author" content="王凯强">
+
+	
+	<meta name="description" content="最近挺忙的，本来需要各种为前路做准备，无奈自己天生属于低血压型的人，偏偏就是提不起劲儿来干正事儿，却把大好的一天光阴全交代到SRS的分析工作上了。虽然说这多少算不务正业，不过由于本人有着严重的软件新版本强迫症，故这算是给自己的一个开脱理由吧。 这款软件的破解工作展开比较容易，没有加壳， &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="死亡的飞翔" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
+
+</head>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">死亡的飞翔</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:dahakawang.github.com">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:dahakawang.github.com">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">SRS Audio Sandbox破解纪实</h2>
+	<div class="entry-content"><p>最近挺忙的，本来需要各种为前路做准备，无奈自己天生属于低血压型的人，偏偏就是提不起劲儿来干正事儿，却把大好的一天光阴全交代到SRS的分析工作上了。虽然说这多少算不务正业，不过由于本人有着严重的软件新版本强迫症，故这算是给自己的一个开脱理由吧。</p>
+
+<p>这款软件的破解工作展开比较容易，没有加壳，直接上工具分析之。首先请出OllyDBG来，通过查找字符串引用和查找API MessageBox引用的老法子，很容易就定位了大概的关键代码位置。</p>
+
+<!-- more -->
+
+<p>找到关键位置后，顺手又记录了一下函数调用栈，然后打开了神器IDA。用IDA载入后，跳转到之前找到的关键代码RVA处，着手分析。说起来，我自己喜欢将动态和静态调试方法结合起来用，不如果不愿意太费神分析汇编代码，有时候直接看运行时结果便是最直观和省时的。载入后发觉之前判断的关键点实际上是CWinApp::ShowAppMessageBox函数，继续沿着刚才记录的函数运行时调用栈往上找，依次顺藤摸瓜：AfxMessageBox—&gt;Sub44D240，这才到了SRS程序的代码领空，于是正是着手分析。（IDA这个静态分析功能实在是强大，它可以根据二进制代码特征判断出其是否是库函数代码。这大大节省了我的时间，应为对这类代码我只需要看SDK文档就行了，而不需要去分析其实际的代码行为）</p>
+
+<p>进一步根据线索判断（Sub44D240里包含了SendMessage、AfxMessageBox、GetWindowText等函数，足以说明该函数的关键作用），我锁定在了Sub44D240函数的Sub4430F0调用上，继续追踪到Sub442FF0上，继而是Sub44B9E0过程，最终到了Sub44BC30过程上。在该过程中，我同时追踪到了用户输入的ProductID以及Serial Number等信息，这进一步是我确认了我的判断。</p>
+
+<p>该过程具体代码如下：</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span>Sub44BC30代码</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+<span class="line-number">25</span>
+<span class="line-number">26</span>
+<span class="line-number">27</span>
+<span class="line-number">28</span>
+<span class="line-number">29</span>
+<span class="line-number">30</span>
+<span class="line-number">31</span>
+<span class="line-number">32</span>
+<span class="line-number">33</span>
+<span class="line-number">34</span>
+<span class="line-number">35</span>
+<span class="line-number">36</span>
+<span class="line-number">37</span>
+<span class="line-number">38</span>
+<span class="line-number">39</span>
+<span class="line-number">40</span>
+<span class="line-number">41</span>
+<span class="line-number">42</span>
+<span class="line-number">43</span>
+<span class="line-number">44</span>
+<span class="line-number">45</span>
+<span class="line-number">46</span>
+<span class="line-number">47</span>
+<span class="line-number">48</span>
+<span class="line-number">49</span>
+<span class="line-number">50</span>
+<span class="line-number">51</span>
+<span class="line-number">52</span>
+<span class="line-number">53</span>
+<span class="line-number">54</span>
+<span class="line-number">55</span>
+<span class="line-number">56</span>
+<span class="line-number">57</span>
+<span class="line-number">58</span>
+<span class="line-number">59</span>
+<span class="line-number">60</span>
+<span class="line-number">61</span>
+<span class="line-number">62</span>
+<span class="line-number">63</span>
+<span class="line-number">64</span>
+<span class="line-number">65</span>
+<span class="line-number">66</span>
+<span class="line-number">67</span>
+<span class="line-number">68</span>
+<span class="line-number">69</span>
+<span class="line-number">70</span>
+<span class="line-number">71</span>
+<span class="line-number">72</span>
+<span class="line-number">73</span>
+<span class="line-number">74</span>
+<span class="line-number">75</span>
+<span class="line-number">76</span>
+<span class="line-number">77</span>
+<span class="line-number">78</span>
+<span class="line-number">79</span>
+<span class="line-number">80</span>
+<span class="line-number">81</span>
+<span class="line-number">82</span>
+<span class="line-number">83</span>
+<span class="line-number">84</span>
+<span class="line-number">85</span>
+<span class="line-number">86</span>
+<span class="line-number">87</span>
+<span class="line-number">88</span>
+<span class="line-number">89</span>
+<span class="line-number">90</span>
+<span class="line-number">91</span>
+<span class="line-number">92</span>
+<span class="line-number">93</span>
+<span class="line-number">94</span>
+<span class="line-number">95</span>
+<span class="line-number">96</span>
+<span class="line-number">97</span>
+<span class="line-number">98</span>
+<span class="line-number">99</span>
+<span class="line-number">100</span>
+<span class="line-number">101</span>
+<span class="line-number">102</span>
+<span class="line-number">103</span>
+<span class="line-number">104</span>
+<span class="line-number">105</span>
+<span class="line-number">106</span>
+<span class="line-number">107</span>
+<span class="line-number">108</span>
+<span class="line-number">109</span>
+<span class="line-number">110</span>
+<span class="line-number">111</span>
+<span class="line-number">112</span>
+<span class="line-number">113</span>
+<span class="line-number">114</span>
+<span class="line-number">115</span>
+<span class="line-number">116</span>
+<span class="line-number">117</span>
+<span class="line-number">118</span>
+<span class="line-number">119</span>
+<span class="line-number">120</span>
+<span class="line-number">121</span>
+<span class="line-number">122</span>
+<span class="line-number">123</span>
+<span class="line-number">124</span>
+<span class="line-number">125</span>
+<span class="line-number">126</span>
+<span class="line-number">127</span>
+<span class="line-number">128</span>
+<span class="line-number">129</span>
+<span class="line-number">130</span>
+<span class="line-number">131</span>
+<span class="line-number">132</span>
+<span class="line-number">133</span>
+<span class="line-number">134</span>
+<span class="line-number">135</span>
+<span class="line-number">136</span>
+<span class="line-number">137</span>
+<span class="line-number">138</span>
+<span class="line-number">139</span>
+<span class="line-number">140</span>
+<span class="line-number">141</span>
+<span class="line-number">142</span>
+<span class="line-number">143</span>
+<span class="line-number">144</span>
+<span class="line-number">145</span>
+<span class="line-number">146</span>
+<span class="line-number">147</span>
+<span class="line-number">148</span>
+<span class="line-number">149</span>
+<span class="line-number">150</span>
+<span class="line-number">151</span>
+<span class="line-number">152</span>
+<span class="line-number">153</span>
+<span class="line-number">154</span>
+<span class="line-number">155</span>
+<span class="line-number">156</span>
+<span class="line-number">157</span>
+<span class="line-number">158</span>
+<span class="line-number">159</span>
+<span class="line-number">160</span>
+<span class="line-number">161</span>
+<span class="line-number">162</span>
+</pre></td><td class="code"><pre><code class="nasm"><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span> <span class="c1">; =============== S U B R O U T I N E =======================================</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span> <span class="c1">; Attributes: bp-based frame</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span> <span class="nb">ch</span><span class="nv">eck_PID_SN</span>    <span class="nv">proc</span> <span class="nv">near</span>               <span class="c1">; CODE XREF: realCheckSN+182p</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span> <span class="nv">productId_segs_temp</span><span class="err">=</span> <span class="kt">dword</span> <span class="nv">ptr</span> <span class="o">-</span><span class="mh">14h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span> <span class="nv">new_ProdectID</span>   <span class="err">=</span> <span class="kt">dword</span> <span class="nv">ptr</span> <span class="o">-</span><span class="mh">10h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span> <span class="nv">sn_lowerDWord</span>   <span class="err">=</span> <span class="kt">dword</span> <span class="nv">ptr</span> <span class="o">-</span><span class="mi">4</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span> <span class="nv">SN</span>              <span class="err">=</span> <span class="kt">dword</span> <span class="nv">ptr</span>  <span class="mi">8</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC30</span>                 <span class="nv">push</span>    <span class="nb">ebp</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC31</span>                 <span class="nv">mov</span>     <span class="nb">ebp</span><span class="p">,</span> <span class="nb">esp</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC33</span>                 <span class="nv">and</span>     <span class="nb">esp</span><span class="p">,</span> <span class="mh">0FFFFFFF8h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC36</span>                 <span class="nv">sub</span>     <span class="nb">esp</span><span class="p">,</span> <span class="mh">14h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC39</span>                 <span class="nv">push</span>    <span class="nb">ebx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC3A</span>                 <span class="nv">push</span>    <span class="nb">esi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC3B</span>                 <span class="nv">push</span>    <span class="nb">edi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC3C</span>                 <span class="nv">push</span>    <span class="mh">14h</span>             <span class="c1">; unsigned int</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC3E</span>                 <span class="nv">mov</span>     <span class="nb">ebx</span><span class="p">,</span> <span class="nb">eax</span>        <span class="c1">; ebx指向ProductID首位置</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC40</span>                 <span class="nv">call</span>    <span class="nv">j_??2@YAPAXI@Z</span>  <span class="c1">; operator new(uint)</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC45</span>                 <span class="nv">mov</span>     <span class="nb">esi</span><span class="p">,</span> <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC47</span>                 <span class="nv">lea</span>     <span class="nb">eax</span><span class="p">,</span> <span class="p">[</span><span class="nb">esi</span><span class="o">+</span><span class="mi">6</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC4A</span>                 <span class="nv">push</span>    <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC4B</span>                 <span class="nv">mov</span>     <span class="nb">eax</span><span class="p">,</span> <span class="p">[</span><span class="nb">ebp</span><span class="o">+</span><span class="nv">SN</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC4E</span>                 <span class="nv">lea</span>     <span class="nb">ecx</span><span class="p">,</span> <span class="p">[</span><span class="nb">esi</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC51</span>                 <span class="nv">push</span>    <span class="nb">ecx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC52</span>                 <span class="nv">lea</span>     <span class="nb">edx</span><span class="p">,</span> <span class="p">[</span><span class="nb">esi</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC55</span>                 <span class="nv">push</span>    <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC56</span>                 <span class="nv">push</span>    <span class="nb">esi</span>             <span class="c1">; 新申请的14h的空间</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC57</span>                 <span class="nv">push</span>    <span class="nv">offset</span> <span class="nv">a4x4x4x4x</span> <span class="c1">; &quot;%4x-%4x-%4x-%4x&quot;</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC5C</span>                 <span class="nv">push</span>    <span class="nb">eax</span>             <span class="c1">; SN首地址</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC5D</span>                 <span class="nv">call</span>    <span class="nv">String2Integer</span>  <span class="c1">; 将字符串SN转换为数组，比如</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC5D</span>                                         <span class="c1">; “E6E9-24CB-2968-09BC”变为</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC5D</span>                                         <span class="c1">; E9 E6 ...</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC62</span>                 <span class="nv">mov</span>     <span class="nb">ecx</span><span class="p">,</span> <span class="p">[</span><span class="nb">esi</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span>    <span class="c1">; ECX为后半部分SN</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC65</span>                 <span class="nv">mov</span>     <span class="nb">edi</span><span class="p">,</span> <span class="p">[</span><span class="nb">esi</span><span class="p">]</span>      <span class="c1">; EDI为前半部分SN</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC67</span>                 <span class="nv">push</span>    <span class="nb">esi</span>             <span class="c1">; void *</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC68</span>                 <span class="nv">mov</span>     <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">40h</span><span class="o">+</span><span class="nv">sn_lowerDWord</span><span class="p">],</span> <span class="nb">ecx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC6C</span>                 <span class="nv">call</span>    <span class="nv">j__free</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC71</span>                 <span class="nv">lea</span>     <span class="nb">edx</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">40h</span><span class="o">+</span><span class="nv">productId_segs_temp</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC75</span>                 <span class="nv">push</span>    <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC76</span>                 <span class="nv">push</span>    <span class="nv">offset</span> <span class="nv">a4x</span>      <span class="c1">; &quot;%4x&quot;</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC7B</span>                 <span class="nv">push</span>    <span class="nb">ebx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC7C</span>                 <span class="nv">call</span>    <span class="nv">String2Integer</span>  <span class="c1">; 将ProductID第一段转换为Word</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC81</span>                 <span class="nv">mov</span>     <span class="nb">esi</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">4Ch</span><span class="o">+</span><span class="nv">productId_segs_temp</span><span class="p">]</span> <span class="c1">; esi储存productId_1</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC85</span>                 <span class="nv">lea</span>     <span class="nb">eax</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">4Ch</span><span class="o">+</span><span class="nv">productId_segs_temp</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC89</span>                 <span class="nv">push</span>    <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC8A</span>                 <span class="nv">lea</span>     <span class="nb">ecx</span><span class="p">,</span> <span class="p">[</span><span class="nb">ebx</span><span class="o">+</span><span class="mh">0Ah</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC8D</span>                 <span class="nv">push</span>    <span class="nv">offset</span> <span class="nv">asc_48C804</span> <span class="c1">; &quot;%x&quot;</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC92</span>                 <span class="nv">push</span>    <span class="nb">ecx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC93</span>                 <span class="nv">call</span>    <span class="nv">String2Integer</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC98</span>                 <span class="nv">mov</span>     <span class="nb">edx</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">58h</span><span class="o">+</span><span class="nv">productId_segs_temp</span><span class="p">]</span> <span class="c1">; EDX储存ProductId_2</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC9C</span>                 <span class="nv">add</span>     <span class="nb">esp</span><span class="p">,</span> <span class="mh">38h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BC9F</span>                 <span class="nv">xor</span>     <span class="nb">eax</span><span class="p">,</span> <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCA1</span>                 <span class="nv">push</span>    <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCA2</span>                 <span class="nv">push</span>    <span class="nb">esi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCA3</span>                 <span class="nv">push</span>    <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCA4</span>                 <span class="nv">push</span>    <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCA5</span>                 <span class="nv">call</span>    <span class="nv">__allmul</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCAA</span>                 <span class="nv">mov</span>     <span class="nb">esi</span><span class="p">,</span> <span class="nb">eax</span>        <span class="c1">; product_1*product_2乘积的低word放入esi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCAC</span>                 <span class="nv">lea</span>     <span class="nb">eax</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">20h</span><span class="o">+</span><span class="nv">productId_segs_temp</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCB0</span>                 <span class="nv">push</span>    <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCB1</span>                 <span class="nv">lea</span>     <span class="nb">ecx</span><span class="p">,</span> <span class="p">[</span><span class="nb">ebx</span><span class="o">+</span><span class="mh">14h</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCB4</span>                 <span class="nv">push</span>    <span class="nv">offset</span> <span class="nv">asc_48C804</span> <span class="c1">; &quot;%x&quot;</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCB9</span>                 <span class="nv">push</span>    <span class="nb">ecx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCBA</span>                 <span class="nv">mov</span>     <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">2Ch</span><span class="o">+</span><span class="nv">new_ProdectID</span><span class="o">+</span><span class="mi">4</span><span class="p">],</span> <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCBE</span>                 <span class="nv">call</span>    <span class="nv">String2Integer</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCC3</span>                 <span class="nv">mov</span>     <span class="nb">edx</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">2Ch</span><span class="o">+</span><span class="nv">new_ProdectID</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCC7</span>                 <span class="nv">mov</span>     <span class="nb">eax</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">2Ch</span><span class="o">+</span><span class="nv">productId_segs_temp</span><span class="p">]</span> <span class="c1">; eax保存productId_3</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCCB</span>                 <span class="nv">add</span>     <span class="nb">esp</span><span class="p">,</span> <span class="mh">0Ch</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCCE</span>                 <span class="nv">push</span>    <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCCF</span>                 <span class="nv">push</span>    <span class="nb">esi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCD0</span>                 <span class="nv">push</span>    <span class="mi">0</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCD2</span>                 <span class="nv">push</span>    <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCD3</span>                 <span class="nv">call</span>    <span class="nv">__allmul</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCD8</span>                 <span class="nv">lea</span>     <span class="nb">ecx</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">20h</span><span class="o">+</span><span class="nv">productId_segs_temp</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCDC</span>                 <span class="nv">push</span>    <span class="nb">ecx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCDD</span>                 <span class="nv">push</span>    <span class="nv">offset</span> <span class="nv">asc_48C804</span> <span class="c1">; &quot;%x&quot;</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCE2</span>                 <span class="nv">add</span>     <span class="nb">ebx</span><span class="p">,</span> <span class="mh">1Eh</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCE5</span>                 <span class="nv">push</span>    <span class="nb">ebx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCE6</span>                 <span class="nv">mov</span>     <span class="nb">esi</span><span class="p">,</span> <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCE8</span>                 <span class="nv">mov</span>     <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">2Ch</span><span class="o">+</span><span class="nv">new_ProdectID</span><span class="o">+</span><span class="mi">4</span><span class="p">],</span> <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCEC</span>                 <span class="nv">call</span>    <span class="nv">String2Integer</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCF1</span>                 <span class="nv">mov</span>     <span class="nb">edx</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">2Ch</span><span class="o">+</span><span class="nv">new_ProdectID</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCF5</span>                 <span class="nv">mov</span>     <span class="nb">eax</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">2Ch</span><span class="o">+</span><span class="nv">productId_segs_temp</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCF9</span>                 <span class="nv">add</span>     <span class="nb">esp</span><span class="p">,</span> <span class="mh">0Ch</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCFC</span>                 <span class="nv">push</span>    <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCFD</span>                 <span class="nv">push</span>    <span class="nb">esi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BCFE</span>                 <span class="nv">push</span>    <span class="mi">0</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD00</span>                 <span class="nv">push</span>    <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD01</span>                 <span class="nv">call</span>    <span class="nv">__allmul</span>        <span class="c1">; 结果edx高位,eax低位</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD06</span>                 <span class="nv">mov</span>     <span class="nb">esi</span><span class="p">,</span> <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD08</span>                 <span class="nv">shr</span>     <span class="nb">esi</span><span class="p">,</span> <span class="mh">10h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD0B</span>                 <span class="nv">mov</span>     <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">20h</span><span class="o">+</span><span class="nv">new_ProdectID</span><span class="p">],</span> <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD0F</span>                 <span class="nv">mov</span>     <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">20h</span><span class="o">+</span><span class="nv">new_ProdectID</span><span class="o">+</span><span class="mi">4</span><span class="p">],</span> <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD13</span>                 <span class="nv">xor</span>     <span class="nb">ebx</span><span class="p">,</span> <span class="nb">ebx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD15</span>                 <span class="nv">mov</span>     <span class="nb">cl</span><span class="p">,</span> <span class="mh">10h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD17</span>                 <span class="nv">call</span>    <span class="nv">__allshr</span>        <span class="c1">; {edx,eax}==new_prodectID &gt;&gt; 10h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD1C</span>                 <span class="nv">mov</span>     <span class="nb">ecx</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">20h</span><span class="o">+</span><span class="nv">new_ProdectID</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD20</span>                 <span class="nv">xor</span>     <span class="nb">edx</span><span class="p">,</span> <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD22</span>                 <span class="nv">push</span>    <span class="mi">1</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD24</span>                 <span class="nv">and</span>     <span class="nb">eax</span><span class="p">,</span> <span class="mh">0FFFF0000h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD29</span>                 <span class="nv">push</span>    <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD2A</span>                 <span class="nv">add</span>     <span class="nb">esi</span><span class="p">,</span> <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD2C</span>                 <span class="nv">adc</span>     <span class="nb">ebx</span><span class="p">,</span> <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD2E</span>                 <span class="nv">mov</span>     <span class="nb">edx</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">28h</span><span class="o">+</span><span class="nv">new_ProdectID</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD32</span>                 <span class="nv">push</span>    <span class="nb">ecx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD33</span>                 <span class="nv">push</span>    <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD34</span>                 <span class="nv">call</span>    <span class="nv">__allmul</span>        <span class="c1">; eax=0, edx为new_productID的低位</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD39</span>                 <span class="nv">push</span>    <span class="mi">0</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD3B</span>                 <span class="nv">add</span>     <span class="nb">esi</span><span class="p">,</span> <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD3D</span>                 <span class="nv">push</span>    <span class="mh">8475h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD42</span>                 <span class="nv">adc</span>     <span class="nb">ebx</span><span class="p">,</span> <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD44</span>                 <span class="nv">push</span>    <span class="nb">ebx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD45</span>                 <span class="nv">push</span>    <span class="nb">esi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD46</span>                 <span class="nv">call</span>    <span class="nv">__alldiv</span>        <span class="c1">; {edx,eax} == {edx,esi} / 0x8475</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD4B</span>                 <span class="nv">push</span>    <span class="mi">0</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD4D</span>                 <span class="nv">push</span>    <span class="mh">0AE6000h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD52</span>                 <span class="nv">push</span>    <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD53</span>                 <span class="nv">push</span>    <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD54</span>                 <span class="nv">call</span>    <span class="nv">__allmul</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD59</span>                 <span class="nv">add</span>     <span class="nb">eax</span><span class="p">,</span> <span class="mh">91F2884Dh</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD5E</span>                 <span class="nv">adc</span>     <span class="nb">edx</span><span class="p">,</span> <span class="mh">2DCh</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD64</span>                 <span class="nv">mov</span>     <span class="nb">cl</span><span class="p">,</span> <span class="mh">0Ah</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD66</span>                 <span class="nv">call</span>    <span class="nv">__allshr</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD6B</span>                 <span class="nv">push</span>    <span class="mi">0</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD6D</span>                 <span class="nv">push</span>    <span class="mh">2046h</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD72</span>                 <span class="nv">push</span>    <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD73</span>                 <span class="nv">push</span>    <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD74</span>                 <span class="nv">call</span>    <span class="nv">__allmul</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD79</span>                 <span class="nv">mov</span>     <span class="nb">ecx</span><span class="p">,</span> <span class="mh">0FFFFFFFEh</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD7E</span>                 <span class="nv">sub</span>     <span class="nb">ecx</span><span class="p">,</span> <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD80</span>                 <span class="nv">mov</span>     <span class="nb">eax</span><span class="p">,</span> <span class="mh">0FFFFFFFFh</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD85</span>                 <span class="nv">sbb</span>     <span class="nb">eax</span><span class="p">,</span> <span class="nb">edx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD87</span>                 <span class="nv">mov</span>     <span class="nb">edx</span><span class="p">,</span> <span class="p">[</span><span class="nb">esp</span><span class="o">+</span><span class="mh">20h</span><span class="o">+</span><span class="nv">sn_lowerDWord</span><span class="p">]</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD8B</span>                 <span class="nv">shld</span>    <span class="nb">edx</span><span class="p">,</span> <span class="nb">edi</span><span class="p">,</span> <span class="mi">1</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD8F</span>                 <span class="nv">add</span>     <span class="nb">edi</span><span class="p">,</span> <span class="nb">edi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD91</span>                 <span class="nv">cmp</span>     <span class="nb">edi</span><span class="p">,</span> <span class="nb">ecx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD93</span>                 <span class="nv">jnz</span>     <span class="nv">short</span> <span class="nv">loc_44BDA5</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD95</span>                 <span class="nv">cmp</span>     <span class="nb">edx</span><span class="p">,</span> <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD97</span>                 <span class="nv">jnz</span>     <span class="nv">short</span> <span class="nv">loc_44BDA5</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD99</span>                 <span class="nv">mov</span>     <span class="nb">eax</span><span class="p">,</span> <span class="mi">1</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD9E</span>                 <span class="nv">pop</span>     <span class="nb">edi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BD9F</span>                 <span class="nv">pop</span>     <span class="nb">esi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA0</span>                 <span class="nv">pop</span>     <span class="nb">ebx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA1</span>                 <span class="nv">mov</span>     <span class="nb">esp</span><span class="p">,</span> <span class="nb">ebp</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA3</span>                 <span class="nv">pop</span>     <span class="nb">ebp</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA4</span>                 <span class="nv">retn</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA5</span> <span class="c1">; ---------------------------------------------------------------------------</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA5</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA5</span> <span class="nv">loc_44BDA5</span><span class="p">:</span>                             <span class="c1">; CODE XREF: check_PID_SN+163j</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA5</span>                                         <span class="c1">; check_PID_SN+167j</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA5</span>                 <span class="nv">pop</span>     <span class="nb">edi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA6</span>                 <span class="nv">pop</span>     <span class="nb">esi</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA7</span>                 <span class="nv">xor</span>     <span class="nb">eax</span><span class="p">,</span> <span class="nb">eax</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDA9</span>                 <span class="nv">pop</span>     <span class="nb">ebx</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDAA</span>                 <span class="nv">mov</span>     <span class="nb">esp</span><span class="p">,</span> <span class="nb">ebp</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDAC</span>                 <span class="nv">pop</span>     <span class="nb">ebp</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDAD</span>                 <span class="nv">retn</span>
+</span><span class="line">  <span class="nl">.text:</span><span class="err">0044</span><span class="nf">BDAD</span> <span class="nb">ch</span><span class="nv">eck_PID_SN</span>    <span class="nv">endp</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="section">基本思路</h2>
+
+<p>通过分析，我了解到，其算法大概思路如下：首先，注册流程有效输入为Serial Number和Product ID，Registration No实际上没有参与注册的验证计算过程。SRS通过系统各种信息生成Product ID，然后用户需要提供与Product ID匹配的Serial Number方能注册。当然，Serial Number是需要你拿美刀换的。</p>
+
+<p>简而言之，SRS将Product ID作fp变换，得到一个64bit长的整数，并将用户输入的序列号做fs变换同样得到一个64bit长整数。为了使注册成功，需要满足：</p>
+
+<pre><code>fp(gen()) = fs(SerialNumber) 成立      (1)
+</code></pre>
+
+<p>这其中，gen()的算法我们不需要管，因为其结果在界面Product ID框中已经显示了。我们需要找到fp和fs的实现算法，并顺利推出fs-1的实现。从而：
+SerialNumber = fs<sup>-1</sup>( fp(ProductID) )   (2)</p>
+
+<h2 id="product-id">Product ID变换算法描述</h2>
+
+<p>我们首先描述fp的实现。fp基本上是由我不知道原理的各种数值变换组成，为了精确表述，我直接用C语言描述：</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+<span class="line-number">25</span>
+<span class="line-number">26</span>
+<span class="line-number">27</span>
+<span class="line-number">28</span>
+<span class="line-number">29</span>
+<span class="line-number">30</span>
+<span class="line-number">31</span>
+<span class="line-number">32</span>
+<span class="line-number">33</span>
+</pre></td><td class="code"><pre><code class="c"><span class="line"><span class="n">Product</span> <span class="n">ID</span><span class="err">变换函数描述</span>
+</span><span class="line"> <span class="kr">__int64</span> <span class="n">getProductID</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">id</span><span class="p">){</span>
+</span><span class="line">     <span class="kr">__int64</span> <span class="n">temp</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+</span><span class="line">     <span class="n">DWORD</span> <span class="n">elem</span><span class="p">;</span>
+</span><span class="line">
+</span><span class="line">     <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">){</span>
+</span><span class="line">         <span class="n">sscanf</span><span class="p">(</span><span class="n">id</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="mi">5</span><span class="p">),</span> <span class="s">&quot;%x&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">elem</span><span class="p">);</span>
+</span><span class="line">         <span class="n">temp</span> <span class="o">*=</span> <span class="n">elem</span><span class="p">;</span>
+</span><span class="line">     <span class="p">}</span>
+</span><span class="line">
+</span><span class="line">     <span class="c1">//高地位变换</span>
+</span><span class="line">     <span class="n">DWORD</span> <span class="n">lowerDWord</span> <span class="o">=</span> <span class="n">temp</span><span class="p">;</span>
+</span><span class="line">     <span class="n">DWORD</span> <span class="n">upperDWord</span> <span class="o">=</span> <span class="n">temp</span> <span class="o">&gt;&gt;</span> <span class="mh">0x20</span><span class="p">;</span>
+</span><span class="line">     <span class="n">WORD</span> <span class="n">lower</span> <span class="o">=</span> <span class="n">upperDWord</span><span class="p">;</span>
+</span><span class="line">     <span class="n">WORD</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">upperDWord</span> <span class="o">&gt;&gt;</span> <span class="mh">0x10</span><span class="p">;</span>
+</span><span class="line">     <span class="n">upperDWord</span> <span class="o">=</span> <span class="n">lower</span><span class="p">;</span>
+</span><span class="line">     <span class="n">upperDWord</span> <span class="o">&lt;&lt;=</span> <span class="mh">0x10</span><span class="p">;</span>
+</span><span class="line">     <span class="n">upperDWord</span> <span class="o">|=</span> <span class="n">upper</span><span class="p">;</span>
+</span><span class="line">
+</span><span class="line">     <span class="n">temp</span> <span class="o">=</span> <span class="n">lowerDWord</span><span class="p">;</span>
+</span><span class="line">     <span class="n">temp</span> <span class="o">&lt;&lt;=</span> <span class="mh">0x20</span><span class="p">;</span>
+</span><span class="line">     <span class="n">temp</span> <span class="o">|=</span> <span class="n">upperDWord</span><span class="p">;</span>
+</span><span class="line">
+</span><span class="line">
+</span><span class="line">     <span class="n">temp</span> <span class="o">/=</span> <span class="mh">0x8475</span><span class="p">;</span>
+</span><span class="line">     <span class="n">temp</span> <span class="o">*=</span> <span class="mh">0xAE6000</span><span class="p">;</span>
+</span><span class="line">     <span class="n">temp</span> <span class="o">+=</span> <span class="mh">0x2DC91F2884D</span><span class="p">;</span>
+</span><span class="line">     <span class="n">temp</span> <span class="o">&gt;&gt;=</span> <span class="mh">0xA</span><span class="p">;</span>
+</span><span class="line">     <span class="n">temp</span> <span class="o">*=</span> <span class="mh">0x2046</span><span class="p">;</span>
+</span><span class="line">     <span class="n">temp</span> <span class="o">=</span> <span class="mh">0xfffffffffffffffe</span> <span class="o">-</span> <span class="n">temp</span><span class="p">;</span>
+</span><span class="line">
+</span><span class="line">     <span class="k">return</span> <span class="n">temp</span><span class="p">;</span>
+</span><span class="line"> <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="serial-number">Serial Number变换算法描述　　</h2>
+
+<p>接下来描述fs函数的实现。我们称变换后的Product ID为TransPID，并且LowerDW和HighDW表示一个64bit整数的低双字和高双字，shld表示对应汇编指令的函数,TransSerialNumberHighDW和TransSerialNumberLowDW分别表示变换后的序列号高双字和低双字。则有：</p>
+
+<pre><code>TransSerialNumberHighDW(SerialNumber)=shld(UpperDW(SerialNumber),LowerDW(SerialNumber),1)（3）
+TransSerialNumberLowDW(SerialNumber) = LowerDW(SerialNumber) + LowerDW(SerialNumber)；　　　 （4）
+fs(SerialNumber) =   TransSerialNumberHighDW&lt;&lt; 32 | TransSerialNumberLowDW；　　　　　　　　　（5）
+</code></pre>
+
+<h2 id="serial-number-1">Serial Number逆向变换算法描述</h2>
+
+<p>了解了fs的实现，我们接下来需要着手研究实现fs-1的思路。由于fs高双字和低双字分别由不同的方式变换的（3）、（4），所以我们需要分别求出SerialNumber的高低双字。得到Serial Number的低双字很简单，由（4）可知，我们只要将LowerDW(fp(ProductID))除以2就行。但需注意的是，整个双字值域中，LowerDW(fp(ProductID)) / 2 + (2«31)同样能满足条件（由于溢出导致的相等），这点很重要！</p>
+
+<p>再来考虑高位的算法。我们需要把HighDW(fp(ProductID))往右移一位，这是左边补入的一位可以任意。这时需要注意，考虑到shld性质，有以下两种情况：</p>
+
+<ol>
+  <li>
+    <p>如果HighDW(fp(ProductID))最低位是1则需要LowerDW(SerialNumber)的最高位为1</p>
+  </li>
+  <li>
+    <p>如果HighDW(fp(ProductID))最低位是0则需要LowerDW(SerialNumber)的最高位为0</p>
+  </li>
+</ol>
+
+<p>考虑到LowerDW(fp(ProductID)) / 2和LowerDW(fp(ProductID)) / 2 + (2«31)均可满足条件，若是情况1则选取后者，因为此时可保证LowerDW(SerialNumber)的最高位为1。同理，若是情况2则需选择前者。</p>
+
+<p>该算法的C语言描述如下：</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span>SerialNumber逆变换算法</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+</pre></td><td class="code"><pre><code class="c"><span class="line"> <span class="kt">void</span> <span class="nf">getSerialNumber</span><span class="p">(</span><span class="kr">__int64</span> <span class="n">productId</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">buffer</span><span class="p">){</span>
+</span><span class="line">     <span class="n">DWORD</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">productId</span> <span class="o">&gt;&gt;</span> <span class="mh">0x20</span><span class="p">;</span>
+</span><span class="line">     <span class="n">DWORD</span> <span class="n">lower</span> <span class="o">=</span> <span class="n">productId</span><span class="p">;</span>
+</span><span class="line">     <span class="n">assert</span><span class="p">((</span><span class="n">lower</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">//lower = snLower + snLower因此lower必须为偶数</span>
+</span><span class="line">
+</span><span class="line">
+</span><span class="line">     <span class="n">DWORD</span> <span class="n">snUpper</span> <span class="o">=</span> <span class="n">upper</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">;</span>
+</span><span class="line">
+</span><span class="line">     <span class="n">DWORD</span> <span class="n">snLower</span> <span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+</span><span class="line">     <span class="k">if</span><span class="p">((</span><span class="n">upper</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">){</span>
+</span><span class="line">         <span class="n">snLower</span> <span class="o">=</span> <span class="n">lower</span> <span class="o">/</span> <span class="mi">2</span><span class="p">;</span>
+</span><span class="line">         <span class="n">snLower</span> <span class="o">+=</span> <span class="p">(</span><span class="mi">1</span><span class="o">&lt;&lt;</span><span class="mi">31</span><span class="p">);</span>
+</span><span class="line">     <span class="p">}</span><span class="k">else</span><span class="p">{</span>
+</span><span class="line">         <span class="n">snLower</span> <span class="o">=</span> <span class="n">lower</span> <span class="o">/</span> <span class="mi">2</span><span class="p">;</span>
+</span><span class="line">     <span class="p">}</span>
+</span><span class="line">
+</span><span class="line">     <span class="n">DWORDLONG</span> <span class="n">sn</span> <span class="o">=</span> <span class="n">snUpper</span><span class="p">;</span>
+</span><span class="line">     <span class="n">sn</span> <span class="o">&lt;&lt;=</span> <span class="mh">0x20</span><span class="p">;</span>
+</span><span class="line">     <span class="n">sn</span> <span class="o">|=</span> <span class="n">snLower</span><span class="p">;</span>
+</span><span class="line">
+</span><span class="line">     <span class="n">WORD</span> <span class="o">*</span><span class="n">p</span> <span class="o">=</span> <span class="p">(</span><span class="n">WORD</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">sn</span><span class="p">;</span>
+</span><span class="line">     <span class="n">sprintf</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s">&quot;%04x-%04x-%04x-%04x&quot;</span><span class="p">,</span> <span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">3</span><span class="p">]);</span>
+</span><span class="line"> <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="section-1">小结</h2>
+
+<p>IDA很强大，Crack很费时间，收获的免费SRS使用权和投入的大量时间不成正比。结论：以后还是尽量少搞Crack吧。</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-06-22T22:37:00+08:00" pubdate data-updated="true">Jun 22<span>nd</span>, 2012</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/ni-xiang-po-jie/'>逆向破解</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2012/06/22/srs-audio-sandbox-cracked/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2013
+
+
+<a href="mailto:DevilDavidWang@gmail.com">
+
+
+    王凯强
+
+
+</a>
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'dahakawangtechblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://dahakawang.github.com/blog/2012/06/22/srs-audio-sandbox-cracked/';
+        var disqus_url = 'http://dahakawang.github.com/blog/2012/06/22/srs-audio-sandbox-cracked/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,222 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Hello World程序背后的故事解密（一）—— 编译器的选项和C运行时库 - 死亡的飞翔</title>
+	<meta name="author" content="王凯强">
+
+	
+	<meta name="description" content="作为一个程序员，想必大家都会对HelloWorld这个程序是深有感触吧。是的，就是这个程序第一次带我们进入了神奇的计算机编程的世界，指引我们开始走上了程序员这条充满了艰辛和快乐的路。HelloWorld对我们这群程序员来讲意义是非比寻常的， &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="死亡的飞翔" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
+
+</head>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">死亡的飞翔</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:dahakawang.github.com">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:dahakawang.github.com">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Hello World程序背后的故事解密（一）—— 编译器的选项和C运行时库</h2>
+	<div class="entry-content"><p>作为一个程序员，想必大家都会对HelloWorld这个程序是深有感触吧。是的，就是这个程序第一次带我们进入了神奇的计算机编程的世界，指引我们开始走上了程序员这条充满了艰辛和快乐的路。HelloWorld对我们这群程序员来讲意义是非比寻常的，因此我想更加深入的研究一下C语言版的HelloWorld程序，撕开它的外衣，将隐藏在简单表象下的运行时秘密拿出来给各位看看。</p>
+
+<!-- more -->
+
+<p>这个系列文章预计将通过对CRT源代码的分析，结合对C程序反汇编和动态调试得出的结果，试图阐述一个程序整个生命周期中CRT所起的作用，从而使各位对C语言的各种底层机制有所了解。但是值得注意的是，C语言的底层是高度依赖具体的OS来实现其功能的，所以我们的分析不能够脱离实际环境。我在撰写本文时所用的环境是Windows 7，并且使用Visual Studio 2010的C语言编译器。</p>
+
+<h2 id="winmainmain">WinMain还是main？</h2>
+
+<p>作为windows下的开发人员，我们都知道，M$在标准C定义的入口函数main之外还定义了一个入口函数WinMain，这个函数是你编写win32程序的默认程序入口。那么WinMain和main到底有什么不一样呢？</p>
+
+<p>我们知道在VS建立工程的时候，我们可以指定建立工程的类型（console还是win32），这个实际上就决定了我们程序的入口点是什么。但是，两种类型在编译器和连接器看来到底有什么差异呢？通过对比编译链接的命令行可以看出，实际上两种工程主要有两点差异：</p>
+
+<ol>
+  <li>console工程定义_CONSOLE宏，而win32工程会定义_WINDOWS宏</li>
+  <li>console工程在链接选项里指定/subsystem:console，而win32工程在连接选项里指定/subsystem:windows</li>
+</ol>
+
+<p>实际上，第一点差异影响的是编译器的工作，通过定义_WINDOWS和_CONSOLE宏，可以实现针对控制台和GUI程序在编译时的配置。这就像我们通过定义_DEBUG宏实现在调试时显示调试信息而在发布时取消调试信息的原理有异曲同工之妙。</p>
+
+<p>第二点差异影响的是连接器的工作。由于不同的工程类型对应不同的入口点，通过设置连接器subsystem的参数，我们可以指定入口点到底是哪一个。我们分析一下微软提供的CRT的实现源文件，在crt0.c里是c运行时的初始化相关例程（实际上不止crt0.c，有关这一系列初始化源文件，我会在下一篇文章中分析）。我们可以看到实际上我们的C程序第一个载入的函数是mainCRTStartup或者WinMainCRTStartup，这两个入口函数分别对应Windows下控制台程序和图形界面程序的入口点。在他两本身的实现中，他们各自调用了main和WinMain函数。那么mainCRTStartup或WinMainCRTStartup又是谁指定的呢？实际上就是连接器，连接器在生成PE文件的时候，会指明代码段程序的入口地址，这个信息会被操作系统的loader使用，在装载我们的可执行程序的时候，loader根据连接器指定的入口点指导程序开始执行。</p>
+
+<h2 id="unicodembcs">Unicode还是MBCS？</h2>
+
+<p>时过境迁，现代的软件开发早已不是一个人的游戏，也不再是在某个小网站上发布然后收取注册费用的小打小闹的盈利方式。我们开始追求是国际化的发展，不仅要在国内市场推广我们的产品，还想在在国外的市场中分一杯羹。这就要求我们的软件有Globalization的意识，而其中最重要的就是语言问题。</p>
+
+<p>想当初ANSI制定文字编码ASCII的时候，没有想过国际化的潜在需求，也没有考虑各领域符号的需求，从而使得ASCII难以表示世界上其他国家的文字符号，也不能表示数学化学等学科的领域符号。为了解决这个问题，各地区在引入问题编码时根据各自的国情作了修改，当然还得兼容原始的ASCII编码，毕竟这才是老祖宗级别的人物。但是各地区之间的编码却不能兼容（比如台湾使用BIG5繁体编码和咱们使用的GBK就不能相互兼容），这也是微软在其操作系统里面引入code page机制的直接原因——为了统筹协调各地区文字编码的差异。</p>
+
+<p>后来有人站出来表示不能再这样下去了，我们需要一个世界统一的编码，然后你懂的——Unicode诞生了。</p>
+
+<p>咳，说远了。回到正题，由于我们在开发程序时需要考虑程序最终部署在不同的地区，照理说最好的实践就是将程序编译为Unicode版本的，毕竟现在Windows系统内核天生是使用Unicode的，你使用MBCS还得在交给内核前被转换一下，影响效率。但是由于各种现实因素的影响，我们还是不能抛弃MBCS，这就要求我们能够编译两种版本的能力，我们不讨论这其中的方法，但是我们应该知道最基本的，我们可以在程序中指定我们使用哪种编码。</p>
+
+<p>在VS中，有两个地方是与文字编码相关的：</p>
+
+<ol>
+  <li>定义_UNICODE和_MBCS宏</li>
+  <li>使用wmain和wWinMain函数</li>
+</ol>
+
+<p>首先对于第一个，类似上面提到的_CONSOLE和_WINDOWS宏的功能，它也是制定了我们程序在编译是的一些配置，比如ASCII版本的API还是Widechar版本的API。</p>
+
+<p>第二个实际上是影响连接器的行为。我们知道程序的实际入口函数是mainCRTStartup和WinMainCRTStartup，实际上还有两个是wmainCRTStartup和wWinMainCRTStartup分别对应Unicode版本的入口。通过将几次试验，可知控制台和图形界面（main和WinMain）是由编译选项决定的，最终由连接器将其链接进可执行档。但是是否是宽字符版却不是由编译选项决定的，它是由我们源码中出现的是那种版本的入口函数决定的。打个比方，即是我们设置使用unicode，但若是我们的入口函数只定义了main，则链接器还是链接mainCRTStartup版本的函数。由此可知，编译器选项中的Unicode或是MBCS只是在编译时增加相应的宏定义而已，不会影响链接器的功能（即是具体链接那个版本的CRTStartup函数。</p>
+
+<h2 id="section">动态链接版本还是静态链接版本？</h2>
+
+<p>在编译器选项中同样我们能够指定使用动态链接还是静态链接的CRT库函数，在微软的MSDN上我们可以看到以下的对应关系：libcmt.lib对应静态版本c运行时函数的静态实现，而msvcrt.lib对应动态版本的c运行时函数的导入库。</p>
+
+<p>实际上，如果我们使用动态版本的CRT，那么其初始化代码实现可参照crtexe.c，而若是使用静态链接版本的话，其初始化代码则可在crt0.c中找到。本文探讨的只是静态版本的CRT，而暂不涉及动态链接的内容。</p>
+
+<p>我们现在知道了C编译器选项对于C程序底层的一些影响（子系统决定了入口是main还是WinMain，Unicode宏却不能决定入口是否是宽字符版本的，静态和动态编译的差异等），在接下来的几篇文章中，我将抽丝剥茧，一点一点破解CRT隐藏在台面下的一些实现细节。</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-07-22T16:03:00+08:00" pubdate data-updated="true">Jul 22<span>nd</span>, 2011</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/yuan-li-tan-qiu/'>原理探求</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2011/07/22/compiler-and-c-runtime/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2013
+
+
+<a href="mailto:DevilDavidWang@gmail.com">
+
+
+    王凯强
+
+
+</a>
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'dahakawangtechblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://dahakawang.github.com/blog/2011/07/22/compiler-and-c-runtime/';
+        var disqus_url = 'http://dahakawang.github.com/blog/2011/07/22/compiler-and-c-runtime/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>

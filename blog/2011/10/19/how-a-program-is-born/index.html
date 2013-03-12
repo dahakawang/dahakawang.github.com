@@ -1,0 +1,192 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Hello World程序背后的故事解密（二）—— 程序之生 - 死亡的飞翔</title>
+	<meta name="author" content="王凯强">
+
+	
+	<meta name="description" content="近几个月实在是太忙了，偶然想起来博客上一看，离上次写文章居然过了两个月有余，于是手痒痒想加把劲，再码点儿技术文上来^_^ 这个系列是为了挖掘出一个简单的类似Hello World程序隐藏在CRT之下的复杂性，因此在上次分析了“编译器选项和CRT”之后， &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="死亡的飞翔" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
+
+</head>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">死亡的飞翔</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:dahakawang.github.com">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:dahakawang.github.com">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Hello World程序背后的故事解密（二）—— 程序之生</h2>
+	<div class="entry-content"><p>近几个月实在是太忙了，偶然想起来博客上一看，离上次写文章居然过了两个月有余，于是手痒痒想加把劲，再码点儿技术文上来^_^</p>
+
+<p>这个系列是为了挖掘出一个简单的类似Hello World程序隐藏在CRT之下的复杂性，因此在上次分析了“编译器选项和CRT”之后，今天我想再来简单分析一下从程序进程建立直到程序运行到C/C++入口函数处发生的那点儿事儿。</p>
+
+<!-- more -->
+
+<p>我们知道，在Windows下一个进程是使用CreateProcess函数创建的，这个函数调用的成功，标志着有一个程序被加载至内存并准备开始运行了。系统在建立进程时，会完成给进程分配资源，初始化进程的内存空间，初始化进程内核对象，初始化进程环境快（PEB），加载PE映像文件，初始化全局堆，载入DLL等等工作，但是这些工作完成后却并不代表我们的程序已经开始执行了。这是因为进程本身是有“惰性”的，它不会主动执行代码，所以操作系统这时候会建立我们程序的第一个线程，而我们的代码将从这个线程来开始执行。</p>
+
+<p>既然我们讨论“开始执行”，那么本文将不会涉及CreateProcess的原理以及系统建立进程的细节。我们将从线程的建立开始，来讨论我们的主题。</p>
+
+<p>我们且不谈系统提供的给我们使用的CreateThread等函数，首先我们需要知道的是实际上一个线程的建立最终是由NtCreateThreadEx函数实现的，而这个函数则是将58作为调用号传入EAX然后直接使用sysenter指令陷入内核，从而使得线程能够最终建立。NtCreateThreadEx是一个没有被微软公布的函数，由ntdll.dll文件导出。如果你有兴趣可以去网上搜索该函数的原型，但注意由于它并是不公开的函数，所以网上所述的原型不一定正确，并且微软也不会保证今后这个接口不会改变。</p>
+
+<p>内核在接收到新建线程的请求后就会替我们着手新建一个线程，并且为该线程初始化一些参数（包括TEB等），最终将线程的入口设置为RtlUserThreadStart函数，该函数是由ntdll.dll导出的。RtlUserThreadStart的主要工作就是建立SHE的异常处理函数链，它有两个参数，其中一个是用户之前指定的线程入口函数，另一个是传给该入口的参数。注意虽然RtlUserThreadStart有两个参数，但这并不意味着曾经有人调用过它并且给它传参了，这两个参数实际上这是操作系统硬性写入的两个值。我们必须知道，实际上RtlUserThreadStart的执行只是因为操作系统把该线程EIP硬性设置到了RtlUserThreadStart的入口处而已。</p>
+
+<p>RtlUserThreadStart会调用BaseThreadInitThunk函数，这个函数是由kernel.dll导出的，它主要将用户指定的参数压栈，接着就直接调用用户指定的线程入口函数了。</p>
+
+<p>至此，一个线程全面建立！</p>
+
+<p>当然，如果这个线程是主线程的话，情况有些不同。因为这时候BaseThreadInitThunk调用的可还不会是你的main或WinMain函数，它将调用PE文件中指定的入口函数，如果是VC编译的程序这个入口将是mainCRTStartup函数。</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-10-19T16:03:00+08:00" pubdate data-updated="true">Oct 19<span>th</span>, 2011</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/yuan-li-tan-qiu/'>原理探求</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2011/10/19/how-a-program-is-born/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2013
+
+
+<a href="mailto:DevilDavidWang@gmail.com">
+
+
+    王凯强
+
+
+</a>
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'dahakawangtechblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://dahakawang.github.com/blog/2011/10/19/how-a-program-is-born/';
+        var disqus_url = 'http://dahakawang.github.com/blog/2011/10/19/how-a-program-is-born/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+---
+layout: post
+title: "关于Visual C++增量链接以及.textbss"
+date: 2011-08-01 22:08
+comments: true
+categories: [原理探求]
+sharing: false
+published: true
+---
+　好的，文接上回，本文我就来讲讲微软link.exe连接器的Incremental Liking这个特性。当然这个其实不是微软linker独有的特性，很多链接器都有这个特性，这个特性实际上是为了提高链接速度的。
+
+　　想象一下这个场景，我写了两个函数foo()和bar()，其中foo()在0x400100处而bar()紧接着保存在0x400200处。现在我将foo()改写了一下，添加了一些perfect的功能，然后编译了新的代码。不过现在的麻烦是foo()不可避免的变大了，他现在需要200h字节来保存了。那么链接器该怎么办？
+
+　　一般的思考是

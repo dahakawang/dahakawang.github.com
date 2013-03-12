@@ -1,0 +1,219 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>记一款宽带拨号器加密算法逆向实例 - 死亡的飞翔</title>
+	<meta name="author" content="王凯强">
+
+	
+	<meta name="description" content="这两天闲来无事，想起来许久之前曾答应朋友试着分析一下这个拨号器加密方式，花了几天时间分析，于是有了本文。下面将描述加密过程的技术细节，以及一些破解的心得。 首先，该拨号器存在三个平台的三个版本，但鉴于Windows下拨号过程需经过两次麻烦的握手（一次失败拨号，获取失败的返回值并参与第二次加密过程， &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="死亡的飞翔" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
+
+</head>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">死亡的飞翔</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:dahakawang.github.com">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:dahakawang.github.com">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">记一款宽带拨号器加密算法逆向实例</h2>
+	<div class="entry-content"><p>这两天闲来无事，想起来许久之前曾答应朋友试着分析一下这个拨号器加密方式，花了几天时间分析，于是有了本文。下面将描述加密过程的技术细节，以及一些破解的心得。</p>
+
+<p>首先，该拨号器存在三个平台的三个版本，但鉴于Windows下拨号过程需经过两次麻烦的握手（一次失败拨号，获取失败的返回值并参与第二次加密过程，从而最终生成密文），我最终选择了Linux版本来进行分析。</p>
+
+<!-- more -->
+
+<p>将拿到手的拨号器用IDA打开分析一下，发觉程序大部分数据都是不可识别的，整个程序只有一个段，且整个段是可读写执行的。这显然表明程序是加壳了的，只能动跟了。于是在虚拟机里跑一个ubuntu，在宿主机器上通过IDA对ubuntu里的拨号器进行远程调试。根据stack balance原则，我在一开始的esp处下硬件断点，当程序被断下来后再跑了几步就到了真正的OEP处了。不过这样很麻烦，每次都要大费周章才能找到OEP，但是苦于Linux下不知如何dump出可执行档映像，所以在分析的前一个阶段很是麻烦。后来在机缘巧合下发觉程序二进制档中包含UPX关键字，方知这是UPX加壳的，于是下载了官方的工具将程序脱壳了。</p>
+
+<p>脱壳后终于可以进行静态分析了，这时候IDA终于可以一展身手了。话又说回来，写这程序哥们儿爱忘事儿，居然没有把符号清除掉，这样我很轻易地就发觉了程序使用了LUA脚本。后来通过追踪，发觉程序附带的encrypt.data就是LUA脚本。这个脚本文件是干嘛的呢？实际上，为了迷惑分析者，这款软件将实际的加密过程用LUA脚本语言来实现，要不是作者粗心了，估计想要在不知道这是LUA脚本的前提下分析程序行为够呛，至少我得深入LUA虚拟机里分析代码行为了。</p>
+
+<p>发觉这一点后二话不说下载了LUA的源码，编译后开始执行这个脚本，但发觉执行失败，后来又用LUADec尝试恢复LUA编译后脚本的源代码也被告知失败。而他们的错误提示都是——Bad opcode。这样看来，作者是将官方LUA虚拟机的操作码给重新定义了。花了点时间研究对比了拨号程序和LUA官方解释器的代码，发觉实际上作者提替换方式为：</p>
+
+<table>
+<tr><td><b>官方操作码</b></td> <td><b>自定操作码</b></td></tr>
+<tr><td>MOVE</td> <td>LOADNIL</td></tr>
+<tr><td>LOADK</td> <td>LOADBOOL</td></tr>
+<tr><td>LOADBOOL</td> <td>LOADK</td></tr>
+<tr><td>LOADNIL</td> <td>MOVE</td></tr>
+</table>
+
+<p>找了些关于LUA官方二进制档格式的资料，自己写了一个转换软件，将这个不标准的LUA脚本文件转换为标准的LUA文件。本来想分析脚本行为直接得到解密算法的，但是首先反编译软件LUADec分析这个脚本直接crash了（后来查知这款软件尚不稳定），所以我不能直接分析LUA语言。再则我用ChunkSpy直接分析得出LUA的虚拟机代码，虽然我手头有LUA指令集参考，不过看着这个基于栈的方式工作的指令集我表示没有时间和兴趣再去分析了。</p>
+
+<p>于是采用了折中的方案，你的密文不是运行脚本得出的嘛。OK，那我也运行你的脚本不也得出密码了。不过说来简单，做着难。总体说来是由于LUA不支持位运算，在加密过程中它就将位运算委托给主程式完成。于是整个加密过程包含了大量的interop，无疑增加了我的工作量，因为我需要完成所有脚本调用的函数，并把它们注册到LUA环境中去——共12条函数。但是一旦补全所有函数，生成同拨号器一样的加密结果就是如探囊取物了——直接运行脚本就行了。</p>
+
+<p>下面我再将现有的分析结果总结一下：</p>
+
+<p>首先，加密程序会取4个自变量，分别是账号、密码、随机数、时间（Unix Time Stamp）。我们设他们为strUser, strPassword, rand#以及time。密文是由上述四个变量决定的，密文有ASCII编码，由以下域构成：</p>
+
+<p><img src="/images/blogs/2012/dialer_pw_structure.png" alt="" /></p>
+
+<p>对于A字段，这是常量字符串，也就是说这5个ASCII字符会被加到每个密文的开始。B字段是一个包含32个字符的区域，关于这个区段我下面再谈。</p>
+
+<p>C字段包含4个字符，它是这样计算而来：首先对strPassword每个字节（不包括NULL）累加得到sum，然后有key = rand# XOR sum;我们取key这个值的低16位转换为ASCII（刚好最多四个字符不是么）。得到的四个ASCII字符就是C字段。C字段会将B字段最后4个ASCII字符替换掉。</p>
+
+<p>D字段是原始账号，请注意原账号所有的字母将被转换为大写。</p>
+
+<p>B字段格式如下：</p>
+
+<pre><code>(B1）2010(B2)(B3)(B4)
+</code></pre>
+
+<p>其中B1长8个字符，是time转换为十六进制的ASCII值，2010是固定的4个字符，(B4)长4字符，他将被C字段替换。</p>
+
+<p>B2和B3都是长为8个字符的字节，但目前在没有分析LUA脚本的前提下我只知道B2 = fn1(strUser, strPassword, rand#, time), B3 = fn3(strUser, strPassword, rand#, time)。也即是说B2和B3和四个自变量均有关，且加密过程fn1或fn2至少有一个包括MD5算法。</p>
+
+<p>以上便是我目前为止的研究成果了，以上。</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-08-06T14:24:00+08:00" pubdate data-updated="true">Aug 6<span>th</span>, 2011</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/ni-xiang-po-jie/'>逆向破解</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2011/08/06/a-dialer-cracked/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2013
+
+
+<a href="mailto:DevilDavidWang@gmail.com">
+
+
+    王凯强
+
+
+</a>
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'dahakawangtechblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://dahakawang.github.com/blog/2011/08/06/a-dialer-cracked/';
+        var disqus_url = 'http://dahakawang.github.com/blog/2011/08/06/a-dialer-cracked/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>

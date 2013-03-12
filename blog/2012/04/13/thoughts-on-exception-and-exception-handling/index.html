@@ -1,0 +1,196 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>关于异常和异常错误处理的思考 - 死亡的飞翔</title>
+	<meta name="author" content="王凯强">
+
+	
+	<meta name="description" content="程序员们无时无刻不在于Bug和错误做着斗争。早在面向过程的C语言时代，错误一般是通过函数接口的返回值来指定的。我们事先对接口做好返回值约定，然后调用者根据约定内容检查调函数回值，从而得知了函数调用的结果。典型的约定，有比如返回NULL表示调用失败，有比如返回0表示成功其他表示各种错误原因等等。 &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="死亡的飞翔" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
+
+</head>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">死亡的飞翔</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/list">文章</a></li>
+	<li><a href="/archives">存档</a></li>
+  <li><a href="/tags">标签</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="http://google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:dahakawang.github.com">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+	</div>
+	<form class="search" action="http://google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:dahakawang.github.com">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">关于异常和异常错误处理的思考</h2>
+	<div class="entry-content"><p>程序员们无时无刻不在于Bug和错误做着斗争。早在面向过程的C语言时代，错误一般是通过函数接口的返回值来指定的。我们事先对接口做好返回值约定，然后调用者根据约定内容检查调函数回值，从而得知了函数调用的结果。典型的约定，有比如返回NULL表示调用失败，有比如返回0表示成功其他表示各种错误原因等等。这种方式在当时看上去是个比较完美的解决方案，但是，随着程序的规模增大，这种方式日渐显出了疲态。</p>
+
+<!-- more -->
+
+<p>通过约定和检查返回值的方式检查错误，其结果是开发人员会将大量时间用于做返回值检查，这样程序逻辑里充斥着与主功能无关大量判断语句，这降低了代码的可读性。不仅如此，开发者往往疲于检测返回值，写出了一堆一堆冗长而又臃肿的代码。但是，这还不是最为严峻的挑战。请读者考虑一下这么一种场景，如果我们的某段代码调用了函数A，而函数A调用了30多个函数，每个函数定义了自己的返回值以指明特定错误，那么定义A的返回值将是一个大大的挑战。再试想一下，假设这30个函数又有更深入的调用链呢？看到问题了吧，随着程序抽象层系越高，为其设计返回值约定就越为困难，相对的要检查其返回值所需的代码就约为冗杂。</p>
+
+<p>在我们疲于应付日渐臃肿的返回值约定的时候，伟大的计算机科学家们发明了异常这个好东西，它能在一定层次上缓解之前方法的问题。考虑之前的例子，当A函数调用的30个函数之一的下层某个函数发生错误时，它只是简单的抛出这个异常，这个异常不会再经手中间层次的函数而直接汇报给了A函数的调用者。于是乎，中间函数不需要再定义自己也难以维护的复杂的返回值约定，这大大减轻了设计者的工作量以及开发者的代码量。</p>
+
+<p>那么异常抛出后，到底是由谁来处理呢？异常的设计哲学是，谁能处理谁处理。底层的接口检测到错误的发生，但它没有足够的上下文做出处理决定，因此只能通过向上汇报的方式来找人处理。底层函数的调用者往往知道如何对某个错误做出合适的处理。而且使用异常后，我们不再需要不断地检查函数返回值，只需要在catch语句里指明正确的处理方式即可。这样，程序的主逻辑和错误处理代码被泾渭分明的分离开来，增强了代码的可读性。</p>
+
+<p>我们现在已经知道了异常的好处，那么我们该如何设计和使用异常呢？我的想法是，遵循“异常和错误分离”原则，注意我这里的异常和错误不是java中的概念。为了理解这个原则，我们首先思考一下为什么程序需要抛异常？很容易理解，我们之所以抛异常，是因为我们发觉程序运行时，我们对系统的各种状态的假设不能够被满足。比如我们发觉调用系统写文件失败了，又比如我们发觉某个传入对象参数是非法的null值。由于状态不满足我们的断言，所以本接口所承诺的功能将不能实现，于是乎我们需要汇报异常给上级，告诉它这件事儿我干不了了！但是，在考虑看看，究竟是那些因素造成了我们对系统状态的断言失败了呢？我认为有这三个原因：操作系统的、用户的、以及其他模块的。操作系统的原因就诸如读文件失败，访问网络失败等诸多问题；用户的原因包括误操作，错误的输入等情况；而其他模块的错误则是由于自己编程错误而造成的，它可能是本函数调用的函数有bug进而不能实现功能，也可能是本函数的调用者有bug进而传入了错误的数据。</p>
+
+<p>正是由于这三类因素的存在，才使得我们最终不能完成我们的任务。但这与我的“异常和错误分离”原则有何关系呢？实际上，这里的“异常”即是指系统和用户的因素，这类因素属于不可控因素，但是绝大部分可以事先预见到的。既然是预先可以预见到，显然应该使用一个checked exception来直接标明，这体现了我们对系统和用户可能出现的错误有过预见性的思考，因此所有接口都需要显式地使用throws语句指明这些个异常。当然，使用checked exception会使得代码臃肿，但一方面由于这类异常随着程序规模的增大其数量增长较慢，且其种类较少，另一方面由于我们可以通过使用继承的层次结构抽象数量较多的具体异常，从而可以将checked exception数量抑制在可控范围内。而在“异常和错误分离”原则中，“错误”则是指系统中其他部件的错误。这类错误的特点是，它们都是因为程序编码有错误产生的，换句话说，正是因为本系统的其他构件有了bug，才使得我们调用某个函数产生了错误的结果，或者是我们被传入了一个非法的参数。由于编码bug数量众多且难以预测其种类，因此表达这类错误便适合于使用unchecked exception，在实现上我们使用一个RuntimeException并辅以相应信息就行了。</p>
+
+<p>因此，所谓“异常和错误分离”即是指，“异常”我们用checked exception指出，而“错误”我们使用unchecked exception指明。</p>
+
+<p>我们了解了怎样设计异常，下面我们来思考一下，作为被调用者和调用者，我们又该在异常处理方面做些什么。</p>
+
+<p>首先作为被调用者，一个问题是，我们究竟需不需要检查参数的合法性。一种想法是，既然我是被自己系统其他模块调用的，那么我们有理由相信，如果其他模块工作正常的话，我将势必以一个正确的参数被调用，那么我再去检测传入参数的合法性还有意义么？我们把这个想法先放到一边，让我们再考虑一下，面向对象的基本思想。在面向对象的设计哲学里面，实际上所有的东西都是对象，对象是OO程序的基本功能构件，一个对象应该是一个完整的、稳定的实体，它不应该被外部错误的影响。这样看来，既然我们是以对象来看世界的，我们显然是不应该相信别的类，即是它是我们一个系统的。这样想来，我们着实需要对传入参数做出严格检查，然后在检查到错误时，抛出相应异常。现在我们知道，不检查参数，可以简化程序减少工作量，检查参数，可以增强程序构件的健壮性，也便于调试。我们究竟要不要检查这类错误，我想，完全需要你作为设计者，在工作量和程序健壮性、易调试性间取得一个良好的折中：对于一些处于系统内部的内，我们的检查相应的放松，而对于系统边界类，我们需要较为严格的检查。</p>
+
+<p>话分两头，作为调用者，我们又该做些什么呢？我们既然以异常指明错误，那么是否意味着对于我们之前某函数返回null然后检测返回值是否为null的代码，都可以通过抛出异常、捕获异常来替代呢？我认为不是的。之前自己曾设计了一个getCurrentAccount接口，功能是返回当前用户的账号，并且我打算通过返回null表明用户尚没有设置当前账号。但我一直在思考，最后得出，这里显然还是不应该抛出异常，因为用户未设置当前帐户显然不属于错误啊。我们退一步再讲，无论如何，我们总需要一个判断语句指出当前是否有设置账号，所以即使使用了异常，在这里也不能发挥出其优势。因此，异常技术并不是将以前的返回值机制武断地替换掉，而是需要根据实际情况，判断这个情况是否是错误状态，然后再做决定是否采用异常机制。</p>
+
+<p>前一段时间给团队里做设计十分苦逼，特别是希望让不同人实现代码时候能够让错误和异常得到有效控制。今儿整理了一下自己的思路，于是便有了此文，希望与大家共同探讨之。</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-04-13T22:47:00+08:00" pubdate data-updated="true">Apr 13<span>th</span>, 2012</time></div>
+	<div class="tags">
+
+
+	<a class='category' href='/blog/categories/cheng-xu-si-kao/'>程序思考</a>
+
+
+</div>
+	
+		
+			<div class="comments"><a href="/blog/2012/04/13/thoughts-on-exception-and-exception-handling/#disqus_thread">Comments</a></div>
+		
+
+	
+</div></article>
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2013
+
+
+<a href="mailto:DevilDavidWang@gmail.com">
+
+
+    王凯强
+
+
+</a>
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'dahakawangtechblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://dahakawang.github.com/blog/2012/04/13/thoughts-on-exception-and-exception-handling/';
+        var disqus_url = 'http://dahakawang.github.com/blog/2012/04/13/thoughts-on-exception-and-exception-handling/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>
