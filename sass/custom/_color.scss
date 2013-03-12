@@ -5,7 +5,43 @@
 // $color-gray03: #ccc;
 // $color-gray04: #ddd;
 // $color-gray05: #fff;
-
 p {
-text-indent:2em;
+  text-indent:2em;
+  text-align: left;
+  font-family:arial, '微软雅黑', '新宋体', sans-serif, '宋体';
+  word-break: normal;
+  word-wrap: break-word;
+  font-size: 12pt;
+  line-height: 3ex;
+  margin-bottom:2ex;
+}
+
+
+h2{
+  font-family:arial, '黑体', '新宋体', sans-serif, '宋体';
+  font-weight:900;
+  color:#444444;
+}
+
+article .entry-content ul, article .entry-content ol, article .entry-content dl{
+  margin-top: 3ex;
+  margin-bottom: 3ex
+}
+
+article .entry-content ul li p, article .entry-content ol li p, article .entry-content dl li p, {
+  margin: 0px;
+  margin-top: 1ex;
+  text-indent:0;
+  font-size: 12pt;
+}
+
+article .entry-content ul li, article .entry-content ol li, article .entry-content dl li, {
+  margin: 0px;
+  margin-top: 1ex;
+  text-indent:0;
+  font-size: 12pt;
+}
+
+article .entry-content h2{
+  font-weight: bold;
 }

@@ -9,11 +9,11 @@ published: true
 ---
 接触ruby有一段时间了，说起来自己和这门语言倒挺有缘。学生时代的时候，曾经沉迷于一款叫做RPG Maker的软件。当时和朋友以班上的同学为原型写了一部武侠剧，并计划用RPG Maker制作成游戏，乐此不疲。这个RPG Maker在内部使用了一门脚本语言来描述其游戏逻辑，这门语言便是Ruby。于是乎为了修改游戏框架、拓展引擎原有特性，自己花了不少功夫学习Ruby。可惜最后，由于高考临近，Ruby随着RPG Maker一块儿，淹没在了记忆的深处。
 
+<!-- more -->
+
 最近突然间有了兴趣，又把Ruby拿出来看看，却发觉这五六年间，Ruby语言的变化之大，是我难以预期的。无论是语言特性本身，还是周边的开发工具、程序库，都较之前有了较大的发展，于是重温变成了重新学习。
 
 既然是学习，光说不练可不行，于是乎又一边开始学习起了Ruby on Rails来，希望能够学以致用。RoR在Ruby社区内可是有着响当当的名号，可以说Ruby之所以名声大噪，很大程度上都是由于RoR的功劳。RoR是一个纯粹的开源软件，它凝聚了世界上最优秀Ruby程序员的勤劳和天分。而我自己，也由于对RoR的研读，了解到了不少Ruby的精妙之处。喟叹之际，便也想对其抽丝剥茧，习其精髓，并记录于博客之中，以飨诸位同好。 Y(^_^)Y
-
-<!-- more -->
 
 ## require到底干了什么？
 
@@ -51,7 +51,7 @@ david@david-K40IN:~/Desktop/root$ ruby -e ''
 
 咱们再来谈谈Ruby的包管理机制。这里的基本思路十分简单，Ruby本身载入某个代码只会在LOAD_PATH里寻找，如果我们定义＂使用某个Gem＂为将Gem所在路径添加到Ruby的LOAD_PATH里，这样当我们使用了某个Gem后，我们便能够载入这个Gem的代码了。其次，我们在包的根目录下放上某个包含诸如作者、主页、依赖的库等等信息的文件，这便有了Gem的元数据信息。最后，我们把Gem的根目录命名为Gem名加版本号，这样多版本的管理机制也就有了。于是乎，整个Gem的工作机制便呼之欲出了。
 
-按照惯例，我们一般是用require 'arel'的方式来载入Gem代码。可是，根据require函数定义，我们实际上需要使用类似 'gems/arel-3.0.2/arel'的参数传给require才能达到我们的目的。为什么简单的require 'arel'能行呢？因为我们在此之前使用了gem 'arel' 语句，是它按照之前提到的规律找到了arel库某个版本的位置，并将它加入到LOAD_PATH里，这才使我们能够简单地require一个Gem库。
+按照惯例，我们一般是用require 'arel'的方式来载入Gem代码。可是，根据require函数定义，我们实际上需要将类似'gems/arel-3.0.2/arel'的参数传给require才能达到我们的目的。为什么简单的require 'arel'能行呢？因为我们在此之前使用了gem 'arel' 语句，是它按照之前提到的规律找到了arel库某个版本的位置，并将它加入到LOAD_PATH里，这才使我们能够简单地require一个Gem库。
 
 不过，正如上一节指出的，在新版本的Ruby里，Kernel#require早已自动被RubyGem里的同名函数覆盖了。因此，在新版本的Ruby里，我们连gem语句都不需要，可以直接require了（老版本则需要我们显式调用require 'rubygem'才行）。不过，若是你需要明确的指定使用某一版本的Gem（Gem 'arel', '＞=3.0.0'），还是需要显示地调用gem方法。
 
@@ -67,7 +67,7 @@ bundle install指令致力于确保Gem所有依赖库均被安装到本机，但
 
 Bundler还提供了一个Bundler.require方法，该方法提供了比Bundler.setup更方便的特性，它将直接将Gemfile列举的依赖全部载入内存。关于使用Bundler.setup还是Bundler.require的讨论已经存在已久，无非就是Bundler.setup提供了一个妥协，使得程序可以滞后载入（Lazy Loading），从而减少不必要的加载，加快程序启动速度。而Bundler.require则主要是基于方便开发者（Programmer Friendly）的考量，它使开发者省去了大量的精力去显式地加载代码。
 
-另外一个问题是有关Gemfile.lock文件的。我们是否需要check in这个文件到代码库里？这里的答案要度时而定。首先，我们知道Gemfile一般指明了一个依赖版本范围（或者没有），当我们运行bundle install的之后，生成的Gemfile.lock实际上是指明了每个依赖Gem的一个固定版本(在满足Gemfile指明的版本范围前提下)。
+另外一个问题是有关Gemfile.lock文件的。我们是否需要check in这个文件到代码库里？这里的答案要度时而定。首先，我们知道Gemfile一般指明了一个依赖版本范围（或者没有），当我们运行bundle install的之后，生成的Gemfile.lock实际上是指明了每个依赖Gem的一个**固定版本**(在满足Gemfile指明的版本范围前提下)。
 
 然后我们需要考虑这么一个convention，即我们开发Gem库的时候，我们总是希望我们的库能够和尽可能多版本的依赖Gem一同工作，而当我们开发应用的时候，我们往往希望我们依赖的Gem版本维持不变（因为此时的测试十分严格，将精确到Gem库的具体行为上），以保证我们的应用发布后十分稳定。
 

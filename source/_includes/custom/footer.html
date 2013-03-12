@@ -1,6 +1,13 @@
 Copyright &copy; {{ site.time | date: "%Y" }}
+
+{% if site.email %}
+<a href="mailto:{{site.email}}">
+{% endif %}
 {% if site.author %}
     {{ site.author }}
 {% else %}
     {{ site.title }}
+{% endif %}
+{% if site.email %}
+</a>
 {% endif %}
